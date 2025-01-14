@@ -2,20 +2,18 @@
 
 import * as React from "react";
 import {
-  AudioWaveform,
   BookOpen,
   Bot,
-  Command,
-  Frame,
-  GalleryVerticalEnd,
+  CircleCheckBig,
+  CircleOff,
+  ClockArrowUp,
+  FileStack,
   Home,
-  Map,
-  PieChart,
-  Settings2,
+  Plus,
   SquareTerminal,
-  User2,
-  Users,
+  Tag,
   Users2,
+  WatchIcon,
 } from "lucide-react";
 
 import { NavMain } from "@/components/nav-main";
@@ -32,9 +30,9 @@ import Link from "next/link";
 // This is sample data.
 const data = {
   user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
+    name: "admin",
+    email: "danesh.monzer@gmail.com",
+    avatar: "/file.svg",
     role: "Admin",
   },
   navMain: [
@@ -43,20 +41,6 @@ const data = {
       url: "/admin/dashboard",
       icon: SquareTerminal,
       isActive: true,
-      items: [
-        {
-          title: "گزارشات فروش",
-          url: "#",
-        },
-        {
-          title: "گزارشات مشتریان",
-          url: "#",
-        },
-        {
-          title: "گزارشات انبار",
-          url: "#",
-        },
-      ],
     },
     {
       title: "مشتریان",
@@ -64,12 +48,9 @@ const data = {
       icon: Users2,
       items: [
         {
-          title: "همه مشتریان",
-          url: "#",
-        },
-        {
           title: "افزودن مشتری",
-          url: "#",
+          url: "/admin/dashboard/customers/add",
+          icon: Plus,
         },
       ],
     },
@@ -79,20 +60,19 @@ const data = {
       icon: Bot,
       items: [
         {
-          title: "همه محصولات",
-          url: "#",
-        },
-        {
           title: "افزودن محصول",
-          url: "#",
+          url: "/admin/dashboard/products/add",
+          icon: Plus,
         },
         {
           title: "دسته‌بندی‌ها",
-          url: "#",
+          url: "/admin/dashboard/products/categories",
+          icon: FileStack,
         },
         {
           title: "تگ‌ها",
-          url: "#",
+          url: "/admin/dashboard/products/tags",
+          icon: Tag,
         },
       ],
     },
@@ -102,35 +82,24 @@ const data = {
       icon: BookOpen,
       items: [
         {
-          title: "همه سفارشات",
-          url: "#",
+          title: "افزودن سفارش",
+          url: "/admin/dashboard/orders/add",
+          icon: Plus,
         },
         {
-          title: "سفارشات معلق",
-          url: "#",
+          title: "سفارشات در انتظار",
+          url: "/admin/dashboard/orders/pending",
+          icon: ClockArrowUp,
         },
         {
           title: "سفارشات پایان‌یافته",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "تنظیمات",
-      url: "/admin/dashboard/sttings",
-      icon: Settings2,
-      items: [
-        {
-          title: "تنظیمات عمومی",
-          url: "#",
+          url: "/admin/dashboard/orders/completed",
+          icon: CircleCheckBig,
         },
         {
-          title: "تنظیمات پرداخت",
-          url: "#",
-        },
-        {
-          title: "تنظیمات ارسال",
-          url: "#",
+          title: "سفارشات لغو شده",
+          url: "/admin/dashboard/orders/cancelled",
+          icon: CircleOff,
         },
       ],
     },
@@ -161,7 +130,7 @@ const data = {
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar collapsible="icon" {...props} side="right">
-      <SidebarHeader className="p-0">
+      <SidebarHeader>
         <Link
           href="/admin"
           className="bg-sidebar-accent text-sidebar-accent-foreground p-2"
@@ -170,10 +139,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <Home className="size-4" />
           </div>
         </Link>
-        {/* <div className="grid flex-1 text-left text-sm leading-tight">
-          <span className="truncate font-semibold">Acme</span>
-          <span className="truncate text-xs">ecom</span>
-        </div> */}
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />

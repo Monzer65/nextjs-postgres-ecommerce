@@ -15,18 +15,18 @@ export interface Database {
   permission: PermissionTable;
   role_permission: RolePermissionTable;
   user_role: UserRoleTable;
-  user_address: UserAddressTable;
+  address: AddressTable;
   wishlist: UserWishlistTable;
   product: ProductTable;
-  product_brand: BrandTable;
-  product_manufacturer: ManufacturerTable;
-  product_variation: ProductVariationTable;
-  product_variation_mapping: ProductVariationMappingTable;
+  brand: BrandTable;
+  manufacturer: ManufacturerTable;
+  variation: ProductVariationTable;
+  product_variation: ProductVariationMappingTable;
   product_image: ProductImagesTable;
-  product_category: ProductCategoryTable;
-  product_tag: ProductTagTable;
-  product_tag_mapping: ProductTagMappingTable;
-  product_discount: ProductDiscountTable;
+  category: CategoryTable;
+  tag: ProductTagTable;
+  product_tag: ProductTagMappingTable;
+  discount: DiscountTable;
   product_waranty: WarrantyTable;
   product_review: ProductReviewTable;
   shopping_session: ShoppingSessionTable;
@@ -118,7 +118,7 @@ export interface UserRoleTable {
 }
 
 // Address table interface
-export interface UserAddressTable {
+export interface AddressTable {
   id: Generated<number>;
   user_id: number;
   address_line1: string;
@@ -161,9 +161,9 @@ export type RolePermissionUpdate = Updateable<RolePermissionTable>;
 export type UserRole = Selectable<UserRoleTable>;
 export type NewUserRole = Insertable<UserRoleTable>;
 export type UserRoleUpdate = Updateable<UserRoleTable>;
-export type UserAddress = Selectable<UserAddressTable>;
-export type NewUserAddress = Insertable<UserAddressTable>;
-export type UserAddressUpdate = Updateable<UserAddressTable>;
+export type Address = Selectable<AddressTable>;
+export type NewAddress = Insertable<AddressTable>;
+export type AddressUpdate = Updateable<AddressTable>;
 export type UserWishlist = Selectable<UserWishlistTable>;
 export type NewUserWishlist = Insertable<UserWishlistTable>;
 export type UserWishlistUpdate = Updateable<UserWishlistTable>;
@@ -243,7 +243,7 @@ export interface ProductImagesTable {
 }
 
 // Category table interface
-export interface ProductCategoryTable {
+export interface CategoryTable {
   id: Generated<number>;
   name: string;
   description: string | null;
@@ -270,7 +270,7 @@ export interface ProductTagMappingTable {
 }
 
 // Product Discount table interface
-export interface ProductDiscountTable {
+export interface DiscountTable {
   id: Generated<number>;
   description: string | null;
   discount_type: "percentage" | "fixed_amount";
@@ -321,18 +321,18 @@ export type ProductVariationUpdate = Updateable<ProductVariationTable>;
 export type ProductImage = Selectable<ProductImagesTable>;
 export type NewProductImage = Insertable<ProductImagesTable>;
 export type ProductImageUpdate = Updateable<ProductImagesTable>;
-export type Category = Selectable<ProductCategoryTable>;
-export type NewCategory = Insertable<ProductCategoryTable>;
-export type CategoryUpdate = Updateable<ProductCategoryTable>;
+export type Category = Selectable<CategoryTable>;
+export type NewCategory = Insertable<CategoryTable>;
+export type CategoryUpdate = Updateable<CategoryTable>;
 export type ProductTag = Selectable<ProductTagTable>;
 export type NewProductTag = Insertable<ProductTagTable>;
 export type ProductTagUpdate = Updateable<ProductTagTable>;
 export type ProductTagMapping = Selectable<ProductTagMappingTable>;
 export type NewProductTagMapping = Insertable<ProductTagMappingTable>;
 export type ProductTagMappingUpdate = Updateable<ProductTagMappingTable>;
-export type Discount = Selectable<ProductDiscountTable>;
-export type NewDiscount = Insertable<ProductDiscountTable>;
-export type DiscountUpdate = Updateable<ProductDiscountTable>;
+export type Discount = Selectable<DiscountTable>;
+export type NewDiscount = Insertable<DiscountTable>;
+export type DiscountUpdate = Updateable<DiscountTable>;
 export type Warranty = Selectable<WarrantyTable>;
 export type NewWarranty = Insertable<WarrantyTable>;
 export type WarrantyUpdate = Updateable<WarrantyTable>;
