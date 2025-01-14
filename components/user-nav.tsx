@@ -114,7 +114,7 @@ export default function UserAccountDropdown({
         <DropdownMenuItem asChild>
           <Link href="/account/profile" className="flex items-center">
             <Settings className="w-4 h-4 mr-2" />
-            <span>تنظیمات</span>
+            <span>پروفایل</span>
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
