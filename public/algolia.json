@@ -1,0 +1,62 @@
+[
+  {
+    "id": 1,
+    "name": "پرده حریر ساده",
+    "description": "پرده‌ای زیبا از جنس حریر مناسب برای اتاق پذیرایی.",
+    "price": 450000,
+    "color": "سفید",
+    "dimensions": "140x260 سانتی‌متر",
+    "material": "حریر",
+    "category": "پرده",
+    "brand": "دیبا",
+    "image": "https://example.com/images/simple-curtain.jpg"
+  },
+  {
+    "id": 2,
+    "name": "پرده زبرا دوجداره",
+    "description": "پرده‌ای دوجداره با طراحی مدرن و قابلیت تنظیم نور.",
+    "price": 650000,
+    "color": "کرم",
+    "dimensions": "120x200 سانتی‌متر",
+    "material": "زبرا",
+    "category": "پرده",
+    "brand": "زیبراکو",
+    "image": "https://example.com/images/zebra-curtain.jpg"
+  },
+  {
+    "id": 3,
+    "name": "پرده طرح دار گل‌دار",
+    "description": "پرده‌ای با طرح گل‌های رنگارنگ مناسب برای اتاق خواب.",
+    "price": 520000,
+    "color": "رنگارنگ",
+    "dimensions": "150x270 سانتی‌متر",
+    "material": "کتان",
+    "category": "پرده",
+    "brand": "هنر پارچه",
+    "image": "https://example.com/images/floral-curtain.jpg"
+  },
+  {
+    "id": 4,
+    "name": "کوسن مخمل برجسته",
+    "description": "کوسن نرم و زیبا با طرح برجسته مناسب برای مبلمان.",
+    "price": 120000,
+    "color": "آبی",
+    "dimensions": "50x50 سانتی‌متر",
+    "material": "مخمل",
+    "category": "کوسن",
+    "brand": "دیبا",
+    "image": "https://example.com/images/velvet-cushion.jpg"
+  },
+  {
+    "id": 5,
+    "name": "رومیزی ترمه سنتی",
+    "description": "رومیزی ترمه دست‌دوز مناسب برای دکوراسیون کلاسیک.",
+    "price": 350000,
+    "color": "قرمز",
+    "dimensions": "100x100 سانتی‌متر",
+    "material": "ترمه",
+    "category": "رومیزی",
+    "brand": "ترمه نقش جهان",
+    "image": "https://example.com/images/termeh-tablecloth.jpg"
+  }
+]
