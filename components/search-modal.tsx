@@ -29,7 +29,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({ onClose }) => {
     const { replace, push } = useRouter();
     const pathname = usePathname();
     const inputRef = useRef<HTMLInputElement>(null);
-
+    console.log("testing")
     const handleSearch = useDebouncedCallback((term: string) => {
         setIsLoading(true)
         const params = new URLSearchParams(searchParams)
