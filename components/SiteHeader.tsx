@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Sheet,
   SheetContent,
@@ -18,21 +17,13 @@ import {
   NavigationMenuTrigger,
   navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu";
-import { Search, ShoppingCart } from "lucide-react";
+import { ShoppingCart } from "lucide-react";
 import { forwardRef } from "react";
 import { MobileNav } from "./mobile-nav";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import Image from "next/image";
 import UserAccountDropdown from "./user-nav";
 import { getCurrentSession } from "@/lib/auth/session";
+import { SearchButton } from "./search-button";
 
 export type Category = {
   title: string;
@@ -162,36 +153,7 @@ export async function Header() {
         <MainNav />
         <MobileNav categories={categories} />
         <div className="flex flex-1 items-center justify-between space-x-4 rtl:space-x-reverse md:justify-end mr-4">
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button variant="outline">
-                <Search className="h-4 w-4" />
-                جستجو
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
-              <DialogHeader className="sr-only">
-                <DialogTitle>جستجو</DialogTitle>
-                <DialogDescription>
-                  جستجو برای محصولات، برندها و موارد دیگر
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-8">
-                <form className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="query" className="sr-only">
-                    عبارت جستجو
-                  </Label>
-                  <Input
-                    id="query"
-                    placeholder="جستجو"
-                    className="col-span-3"
-                  />
-                  <Button type="submit">جستجو</Button>
-                </form>
-              </div>
-            </DialogContent>
-          </Dialog>
-
+          <SearchButton />
           <nav className="flex items-center space-x-4 rtl:space-x-reverse">
             <UserAccountDropdown
               session={session || null}
