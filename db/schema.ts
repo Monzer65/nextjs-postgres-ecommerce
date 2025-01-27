@@ -1,11 +1,4 @@
-import {
-  ColumnType,
-  Generated,
-  Insertable,
-  JSONColumnType,
-  Selectable,
-  Updateable,
-} from "kysely";
+import { ColumnType, Generated, Insertable, JSONColumnType, Selectable, Updateable } from "kysely";
 
 // Define the database structure
 export interface Database {
@@ -27,7 +20,7 @@ export interface Database {
   tag: ProductTagTable;
   product_tag: ProductTagMappingTable;
   discount: DiscountTable;
-  product_waranty: WarrantyTable;
+  warranty: WarrantyTable;
   product_review: ProductReviewTable;
   shopping_session: ShoppingSessionTable;
   cart_item: CartItemTable;

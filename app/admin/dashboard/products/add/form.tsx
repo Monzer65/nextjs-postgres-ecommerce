@@ -1,3 +1,342 @@
+"use client";
+
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { createNewProduct } from "./actions";
+import { Button } from "@/components/ui/button";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
+import { useActionState } from "react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  newProductSchema,
+  NewProductSchema,
+} from "@/types/zod-schemas/products";
+
+export default function ProductForm({ dropdownData }: { dropdownData: any }) {
+  const { brands, manufacturers, categories, discounts, warranties } =
+    dropdownData;
+  const { toast } = useToast();
+
+  const form = useForm<NewProductSchema>({
+    resolver: zodResolver(newProductSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+      price: 0,
+      SKU: "",
+      stock: 0,
+      min_order_quantity: undefined,
+      max_order_quantity: undefined,
+      weight: undefined,
+      length: undefined,
+      width: undefined,
+      height: undefined,
+      brand_id: undefined,
+      manufacturer_id: undefined,
+      category_id: undefined,
+      discount_id: undefined,
+      warranty_id: undefined,
+    },
+  });
+
+  const [state, formAction] = useActionState(createNewProduct, {
+    message: "",
+    success: false,
+  });
+
+  const onSubmit = (data: NewProductSchema) => {
+    const formData = new FormData();
+    Object.entries(data).forEach(([key, value]) => {
+      if (value !== undefined) {
+        formData.append(key, value.toString());
+      }
+    });
+    formAction(formData);
+  };
+
+  if (state.message) {
+    toast({
+      title: state.success ? "Success" : "Error",
+      description: state.message,
+      variant: state.success ? "default" : "destructive",
+    });
+  }
+
+  return (
+    <Form {...form}>
+      <form
+        onSubmit={form.handleSubmit(onSubmit)}
+        className="space-y-8 max-w-3xl"
+      >
+        {/* <FormField
+          control={form.control}
+          name="manufacturer_id"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Manufacturer</FormLabel>
+              <FormControl>
+                <Select
+                  onValueChange={field.onChange}
+                  defaultValue={field.value?.toString()}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a verified email to display" />
+                    </SelectTrigger>
+                  </FormControl>{" "}
+                  <SelectContent>
+                    <SelectItem value="">Select a manufacturer</SelectItem>
+                    {manufacturers.map((manufacturer: any) => (
+                      <SelectItem
+                        key={manufacturer.id}
+                        value={manufacturer.id.toString()}
+                      >
+                        {manufacturer.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        /> */}
+        <FormField
+          control={form.control}
+          name="name"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Name</FormLabel>
+              <FormControl>
+                <Input {...field} />
+              </FormControl>
+              <FormDescription>Product name</FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Description</FormLabel>
+              <FormControl>
+                <Input {...field} />
+              </FormControl>
+              <FormDescription>Product description</FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="price"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Price</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  {...field}
+                  onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                />
+              </FormControl>
+              <FormDescription>Product price</FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="SKU"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>SKU</FormLabel>
+              <FormControl>
+                <Input {...field} />
+              </FormControl>
+              <FormDescription>Stock Keeping Unit</FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="stock"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Stock</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  {...field}
+                  onChange={(e) => field.onChange(parseInt(e.target.value))}
+                />
+              </FormControl>
+              <FormDescription>Available stock</FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="min_order_quantity"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Minimum Order Quantity</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  {...field}
+                  onChange={(e) =>
+                    field.onChange(
+                      e.target.value ? parseInt(e.target.value) : undefined
+                    )
+                  }
+                />
+              </FormControl>
+              <FormDescription>
+                Minimum order quantity (optional)
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="max_order_quantity"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Maximum Order Quantity</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  {...field}
+                  onChange={(e) =>
+                    field.onChange(
+                      e.target.value ? parseInt(e.target.value) : undefined
+                    )
+                  }
+                />
+              </FormControl>
+              <FormDescription>
+                Maximum order quantity (optional)
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="weight"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Weight</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  {...field}
+                  onChange={(e) =>
+                    field.onChange(
+                      e.target.value ? parseFloat(e.target.value) : undefined
+                    )
+                  }
+                />
+              </FormControl>
+              <FormDescription>Product weight (optional)</FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="length"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Length</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  {...field}
+                  onChange={(e) =>
+                    field.onChange(
+                      e.target.value ? parseFloat(e.target.value) : undefined
+                    )
+                  }
+                />
+              </FormControl>
+              <FormDescription>Product length (optional)</FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="width"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Width</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  {...field}
+                  onChange={(e) =>
+                    field.onChange(
+                      e.target.value ? parseFloat(e.target.value) : undefined
+                    )
+                  }
+                />
+              </FormControl>
+              <FormDescription>Product width (optional)</FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="height"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Height</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  {...field}
+                  onChange={(e) =>
+                    field.onChange(
+                      e.target.value ? parseFloat(e.target.value) : undefined
+                    )
+                  }
+                />
+              </FormControl>
+              <FormDescription>Product height (optional)</FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <Button type="submit">Create Product</Button>
+      </form>
+    </Form>
+  );
+}
+
 // 'use client';
 
 // import { CustomerField } from '@/app/lib/definitions';

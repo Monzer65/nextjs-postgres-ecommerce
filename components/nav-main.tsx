@@ -1,7 +1,6 @@
 "use client";
 
 import { ChevronLeft, type LucideIcon } from "lucide-react";
-
 import {
   Collapsible,
   CollapsibleContent,
@@ -17,7 +16,6 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
-
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -43,49 +41,64 @@ export function NavMain({
     <SidebarGroup>
       <SidebarGroupLabel>منوی اصلی</SidebarGroupLabel>
       <SidebarMenu>
-        {items.map((item) => (
-          <Collapsible
-            key={item.title}
-            asChild
-            defaultOpen={item.isActive}
-            className="group/collapsible"
-          >
-            <SidebarMenuItem>
-              <CollapsibleTrigger asChild>
-                <SidebarMenuButton tooltip={item.title} size={"lg"}>
-                  <Link
-                    key={item.title}
-                    href={item.url}
-                    className={cn(
-                      "flex items-center justify-center gap-2 p-1",
-                      {
-                        "bg-sky-100 text-blue-600": pathname === item.url,
-                      }
+        {items.map((item) => {
+          const isParentActive = item.items?.some((subItem) =>
+            pathname.startsWith(subItem.url)
+          );
+
+          return (
+            <Collapsible
+              key={item.title}
+              asChild
+              defaultOpen={item.isActive || isParentActive}
+              className="group/collapsible"
+            >
+              <SidebarMenuItem>
+                <CollapsibleTrigger asChild>
+                  <SidebarMenuButton tooltip={item.title} size={"lg"}>
+                    <Link
+                      href={item.url}
+                      className={cn(
+                        "flex items-center justify-center gap-2 p-1",
+                        {
+                          "bg-blue-500 text-white":
+                            pathname === item.url || isParentActive,
+                        }
+                      )}
+                    >
+                      {item.icon && <item.icon />}
+                      <span className="font-semibold">{item.title}</span>
+                    </Link>
+                    {item.items && (
+                      <ChevronLeft className="mr-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
                     )}
-                  >
-                    {item.icon && <item.icon />}
-                    <span>{item.title}</span>
-                  </Link>
-                  {item.items && <ChevronLeft className="mr-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />}
-                </SidebarMenuButton>
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <SidebarMenuSub>
-                  {item.items?.map((subItem) => (
-                    <SidebarMenuSubItem key={subItem.title}>
-                      <SidebarMenuSubButton asChild>
-                        <a href={subItem.url}>
-                          {subItem.icon && <subItem.icon />}
-                          <span>{subItem.title}</span>
-                        </a>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                  ))}
-                </SidebarMenuSub>
-              </CollapsibleContent>
-            </SidebarMenuItem>
-          </Collapsible>
-        ))}
+                  </SidebarMenuButton>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <SidebarMenuSub>
+                    {item.items?.map((subItem) => (
+                      <SidebarMenuSubItem key={subItem.title}>
+                        <SidebarMenuSubButton asChild>
+                          <Link
+                            href={subItem.url}
+                            className={cn("flex items-center gap-2 p-1", {
+                              "bg-blue-500 text-white": pathname.startsWith(
+                                subItem.url
+                              ),
+                            })}
+                          >
+                            <span>{subItem.icon && <subItem.icon />}</span>
+                            <span>{subItem.title}</span>
+                          </Link>
+                        </SidebarMenuSubButton>
+                      </SidebarMenuSubItem>
+                    ))}
+                  </SidebarMenuSub>
+                </CollapsibleContent>
+              </SidebarMenuItem>
+            </Collapsible>
+          );
+        })}
       </SidebarMenu>
     </SidebarGroup>
   );

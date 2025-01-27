@@ -1,16 +1,8 @@
-"use client"
+"use client";
 
-import {
-  BadgeCheck,
-  Bell,
-  ChevronsUpDown,
-} from "lucide-react"
+import { BadgeCheck, Bell, ChevronsUpDown } from "lucide-react";
 
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,26 +11,27 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 import {
+  SidebarGroup,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
-} from "@/components/ui/sidebar"
-import { LogoutButton } from "./logout-button"
-import Link from "next/link"
+} from "@/components/ui/sidebar";
+import { LogoutButton } from "./logout-button";
+import Link from "next/link";
 
 export function NavUser({
   user,
 }: {
   user: {
-    name: string
-    email: string
-    avatar: string
-  }
+    name: string;
+    email: string;
+    avatar: string;
+  };
 }) {
-  const { isMobile } = useSidebar()
+  const { isMobile } = useSidebar();
 
   return (
     <SidebarMenu>
@@ -57,7 +50,7 @@ export function NavUser({
                 <span className="truncate font-semibold">{user.name}</span>
                 <span className="truncate text-xs">{user.email}</span>
               </div>
-              <ChevronsUpDown className="ml-auto size-4" />
+              <ChevronsUpDown className="mr-auto size-4" />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent
@@ -83,14 +76,20 @@ export function NavUser({
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem className="p-0">
-                <Link href="/account" className="flex items-center w-full p-2 gap-2">
+                <Link
+                  href="/account"
+                  className="flex items-center w-full p-2 gap-2"
+                >
                   <BadgeCheck />
                   حساب کاربری
                 </Link>
               </DropdownMenuItem>
 
               <DropdownMenuItem className="p-0">
-                <Link href="/admin/dashboard/notifications" className="flex items-center w-full p-2 gap-2">
+                <Link
+                  href="/admin/dashboard/notifications"
+                  className="flex items-center w-full p-2 gap-2"
+                >
                   <Bell />
                   اعلانات
                 </Link>
@@ -98,11 +97,14 @@ export function NavUser({
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem className="p-0">
-              <LogoutButton className="px-1" buttonClassName="justify-start p-2" />
+              <LogoutButton
+                className="px-1"
+                buttonClassName="justify-start p-2"
+              />
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>
     </SidebarMenu>
-  )
+  );
 }
