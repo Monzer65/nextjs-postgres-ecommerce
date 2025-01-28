@@ -30,7 +30,7 @@ export async function getProducts(query: string, currentPage: number) {
           eb("product_image.url", "like", `%${query}%`),
           eb("brand.name", "like", `%${query}%`),
           eb("manufacturer.name", "like", `%${query}%`),
-        ])
+        ]),
       )
       .limit(ITEMS_PER_PAGE)
       .offset(offset)
@@ -47,7 +47,7 @@ export async function getProducts(query: string, currentPage: number) {
       totalProducts: totalProducts[0].products_count,
       currentPage,
       totalPages: Math.ceil(
-        Number(totalProducts[0].products_count) / ITEMS_PER_PAGE
+        Number(totalProducts[0].products_count) / ITEMS_PER_PAGE,
       ),
     };
   } catch (error) {
@@ -74,11 +74,18 @@ export async function fetchDropdownData() {
         db
           .selectFrom(table as any)
           .selectAll()
-          .execute()
-      )
+          .execute(),
+      ),
     );
 
   const data = { brands, manufacturers, categories, discounts, warranties };
   dropdownDataCache = { data, timestamp: Date.now() };
+  return data;
+}
+export async function getCategories() {
+  const data = await db
+    .selectFrom("category")
+    .select(["id", "name", "description", "parent_id"])
+    .execute();
   return data;
 }

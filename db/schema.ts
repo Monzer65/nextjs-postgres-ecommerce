@@ -1,4 +1,11 @@
-import { ColumnType, Generated, Insertable, JSONColumnType, Selectable, Updateable } from "kysely";
+import {
+  ColumnType,
+  Generated,
+  Insertable,
+  JSONColumnType,
+  Selectable,
+  Updateable,
+} from "kysely";
 
 // Define the database structure
 export interface Database {
@@ -243,7 +250,6 @@ export interface CategoryTable {
   parent_id: number | null; // For subcategories, null if it's a main category
   created_at: ColumnType<Date, string | undefined, never>;
   updated_at: ColumnType<Date, Date, Date>;
-  deleted_at: ColumnType<Date, string | undefined> | null;
 }
 
 // Product Tag table interface

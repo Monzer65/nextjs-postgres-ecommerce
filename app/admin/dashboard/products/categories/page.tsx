@@ -7,13 +7,14 @@ export default function CategoriesPage() {
     { href: "/admin/dashboard/products", label: "محصولات" },
     { label: "دسته‌بندی‌ها" },
   ];
+
+  //const categories = await
   return (
     <>
       <HeaderAdmin items={items} itemsToDisplay={4} />
       <div className="flex-1 overflow-auto">
         <main className="p-6">
           <h1 className="text-3xl font-bold mb-6">دسته‌بندی‌ها</h1>
-          {/* <ProductsTable query="" currentPage={1} /> */}
         </main>
       </div>
     </>
