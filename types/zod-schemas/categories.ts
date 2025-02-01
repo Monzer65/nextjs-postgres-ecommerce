@@ -17,3 +17,10 @@ export type CategorySchema = z.infer<typeof categorySchema>;
 export const newCategorySchema = categorySchema.omit({ id: true });
 
 export type NewCategorySchema = z.infer<typeof newCategorySchema>;
+
+// New schema for updating a category (all fields optional except `id`)
+export const updateCategorySchema = categorySchema
+  .partial()
+  .required({ id: true });
+
+export type UpdateCategorySchema = z.infer<typeof updateCategorySchema>;

@@ -82,10 +82,20 @@ export async function fetchDropdownData() {
   dropdownDataCache = { data, timestamp: Date.now() };
   return data;
 }
+
 export async function getCategories() {
   const data = await db
     .selectFrom("category")
     .select(["id", "name", "description", "parent_id"])
     .execute();
+  return data;
+}
+
+export async function getCategoryById(id: string) {
+  const data = await db
+    .selectFrom("category")
+    .select(["id", "name", "description", "parent_id"])
+    .where("id", "=", Number(id))
+    .executeTakeFirst();
   return data;
 }
