@@ -29,9 +29,15 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
   ];
 
   return (
-    <main>
+    <>
       <HeaderAdmin items={items} itemsToDisplay={4} />
-      <EditCategoryForm category={category} categories={categories} />
-    </main>
+      <div className="flex-1 overflow-auto">
+        <main className="p-6">
+          <h1 className="text-3xl font-bold mb-6">ویرایش دسته بندی </h1>
+
+          <EditCategoryForm category={category} categories={categories} />
+        </main>
+      </div>
+    </>
   );
 }

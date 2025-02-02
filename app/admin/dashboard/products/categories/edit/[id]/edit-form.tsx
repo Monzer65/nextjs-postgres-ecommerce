@@ -26,15 +26,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
 import { Loader, RefreshCw, Save } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface Category {
   id: number;
   name: string;
-  description: string;
-  parent_id: number | null;
+  description: string | null;
+  parent_id?: number;
 }
 
 interface State {
