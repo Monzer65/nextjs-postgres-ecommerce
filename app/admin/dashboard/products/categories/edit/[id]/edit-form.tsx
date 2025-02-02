@@ -33,7 +33,7 @@ interface Category {
   id: number;
   name: string;
   description: string | null;
-  parent_id?: number;
+  parent_id: number | null;
 }
 
 interface State {
@@ -135,9 +135,13 @@ export default function EditCategoryForm({
               <FormLabel>دسته بندی مادر</FormLabel>
               <Select
                 onValueChange={(value) =>
-                  field.onChange(value ? Number.parseInt(value) : undefined)
+                  field.onChange(
+                    value === "none" ? undefined : Number.parseInt(value),
+                  )
                 }
-                defaultValue={field.value?.toString()}
+                defaultValue={
+                  field.value === undefined ? "none" : field.value?.toString()
+                }
               >
                 <FormControl>
                   <SelectTrigger>
@@ -145,6 +149,7 @@ export default function EditCategoryForm({
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
                   {categories
                     .filter((cat) => cat.id !== category.id) // Exclude the current category
                     .map((cat) => (

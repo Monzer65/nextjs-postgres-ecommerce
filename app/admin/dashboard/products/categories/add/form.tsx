@@ -34,8 +34,8 @@ interface CategoryFormProps {
   categories: {
     id: number;
     name: string;
-    description: string;
-    parent_id: number;
+    description: string | null;
+    parent_id: number | null;
   }[];
 }
 

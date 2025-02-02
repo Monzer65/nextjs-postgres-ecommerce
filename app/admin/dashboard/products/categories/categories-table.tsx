@@ -111,7 +111,7 @@ export function CategoriesTable({ categories }: CategoriesTableProps) {
             <TableCell>{category.name}</TableCell>
             <TableCell>{category.description}</TableCell>
             <TableCell>{category.parent_id ?? "N/A"}</TableCell>
-            <TableCell>
+            <TableCell className="text-left">
               <DropdownMenu
                 open={openDropdownId === category.id}
                 onOpenChange={(isOpen) =>
@@ -124,7 +124,7 @@ export function CategoriesTable({ categories }: CategoriesTableProps) {
                     <MoreHorizontal className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
+                <DropdownMenuContent align="start">
                   <DropdownMenuLabel>عملیات</DropdownMenuLabel>
                   <DropdownMenuItem className="p-0" asChild>
                     <Link

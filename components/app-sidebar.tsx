@@ -68,6 +68,13 @@ const data = {
           title: "دسته‌بندی‌ها",
           url: "/admin/dashboard/products/categories",
           icon: FileStack,
+          items: [
+            {
+              title: "افزودن دسته‌بندی",
+              url: "/admin/dashboard/products/categories/add",
+              icon: Plus,
+            },
+          ],
         },
         {
           title: "تگ‌ها",

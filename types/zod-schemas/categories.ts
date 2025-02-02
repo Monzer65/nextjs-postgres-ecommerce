@@ -14,8 +14,7 @@ export const categorySchema = z.object({
 
 export type CategorySchema = z.infer<typeof categorySchema>;
 
-//export const newCategorySchema = categorySchema.omit({ id: true });
-export const newCategorySchema = categorySchema;
+export const newCategorySchema = categorySchema.omit({ id: true });
 
 export type NewCategorySchema = z.infer<typeof newCategorySchema>;
 

@@ -1,3 +1,4 @@
+"use client";
 import { Loader, TrashIcon } from "lucide-react";
 import { deleteCategoryAction } from "../../add/actions";
 import { useActionState } from "react";

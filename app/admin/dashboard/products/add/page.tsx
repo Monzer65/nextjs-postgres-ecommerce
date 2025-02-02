@@ -20,7 +20,7 @@ export default async function AddNewProductPage() {
       <div className="flex-1 overflow-auto">
         <main className="p-6">
           <h1 className="text-3xl font-bold mb-6">افزودن محصول جدید</h1>
-          <Suspense fallback={<Skeleton />}>
+          <Suspense fallback={<p>loading...</p>}>
             <ProductForm dropdownData={dropdownData} />
           </Suspense>
         </main>
