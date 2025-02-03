@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
+import { Toaster } from "sonner";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -43,11 +44,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang='fa' dir='rtl'>
+    <html lang="fa" dir="rtl">
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${vazirmatn.variable} antialiased font-[family-name:var(--font-vazirmatn-regular)]`}
       >
         {children}
+        <Toaster position="bottom-right" richColors />
       </body>
     </html>
   );

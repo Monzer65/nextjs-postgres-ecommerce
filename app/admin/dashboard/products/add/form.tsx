@@ -1,8 +1,8 @@
 "use client";
 
+import { productSchema, ProductSchemaType } from "@/types/zod-schemas/products";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { createNewProduct } from "./actions";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -14,8 +14,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { useToast } from "@/hooks/use-toast";
-import { useActionState } from "react";
 import {
   Select,
   SelectContent,
@@ -23,110 +21,183 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { toast } from "sonner";
+import { Category } from "@/db/schema";
+import { Textarea } from "@/components/ui/textarea";
+import Autocomplete from "@/components/ui/autocomplete";
 import {
-  newProductSchema,
-  NewProductSchema,
-} from "@/types/zod-schemas/products";
-
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { Check, ChevronsUpDown } from "lucide-react";
 export default function ProductForm({ dropdownData }: { dropdownData: any }) {
-  const { brands, manufacturers, categories, discounts, warranties } =
-    dropdownData;
-  const { toast } = useToast();
-
-  const form = useForm<NewProductSchema>({
-    resolver: zodResolver(newProductSchema),
+  const form = useForm<ProductSchemaType>({
+    resolver: zodResolver(productSchema),
     defaultValues: {
-      name: "",
-      description: "",
-      price: 0,
-      SKU: "",
-      stock: 0,
-      min_order_quantity: undefined,
-      max_order_quantity: undefined,
-      weight: undefined,
-      length: undefined,
-      width: undefined,
-      height: undefined,
-      brand_id: undefined,
-      manufacturer_id: undefined,
-      category_id: undefined,
-      discount_id: undefined,
-      warranty_id: undefined,
+      name: "", // required
+      description: "", // required
+      price: 0, // required
+      SKU: "", // required
+      stock: 0, // required
+      category_id: undefined, // required
+      min_order_quantity: null,
+      max_order_quantity: null,
+      weight: null,
+      length: null,
+      width: null,
+      height: null,
+      brand_id: null,
+      newBrand: "",
+      manufacturer_id: null,
+      discount_id: null,
+      warranty_id: null,
+      //created_at: undefined,
+      //updated_at: undefined,
+      //deleted_at: null,
     },
   });
 
-  const [state, formAction] = useActionState(createNewProduct, {
-    message: "",
-    success: false,
-  });
-
-  const onSubmit = (data: NewProductSchema) => {
-    const formData = new FormData();
-    Object.entries(data).forEach(([key, value]) => {
-      if (value !== undefined) {
-        formData.append(key, value.toString());
-      }
-    });
-    formAction(formData);
+  const fetchBrands = async (query: string) => {
+    // Implement actual API call
+    return dropdownData.brands.filter((brand: any) =>
+      brand.name.toLowerCase().includes(query.toLowerCase()),
+    );
   };
 
-  if (state.message) {
-    toast({
-      title: state.success ? "Success" : "Error",
-      description: state.message,
-      variant: state.success ? "default" : "destructive",
-    });
-  }
+  const handleCreateBrand = async (name: string) => {
+    // Implement API call to create brand
+    const newBrand = await fetch("/api/brands", {
+      method: "POST",
+      body: JSON.stringify({ name }),
+    }).then((res) => res.json());
 
+    form.setValue("brand_id", newBrand.id);
+    form.setValue("newBrand", "");
+  };
+
+  const onSubmit = async (data: ProductSchemaType) => {
+    try {
+      if (data.newBrand) {
+        const newBrand = await handleCreateBrand(data.newBrand);
+        //data.brand_id = newBrand.id;
+      }
+
+      console.log(data);
+      toast(
+        <pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4">
+          <code className="text-white">{JSON.stringify(data, null, 2)}</code>
+        </pre>,
+      );
+    } catch (error) {
+      console.error("Form submission error", error);
+      toast.error("Failed to submit the form. Please try again.");
+    }
+  };
   return (
     <Form {...form}>
       <form
         onSubmit={form.handleSubmit(onSubmit)}
-        className="space-y-8 max-w-3xl"
+        className="space-y-8 max-w-lg border shadow-black p-2 rounded-md"
       >
-        {/* <FormField
+        <FormField
           control={form.control}
-          name="manufacturer_id"
+          name="brand_id"
           render={({ field }) => (
-            <FormItem>
-              <FormLabel>Manufacturer</FormLabel>
-              <FormControl>
-                <Select
-                  onValueChange={field.onChange}
-                  defaultValue={field.value?.toString()}
-                >
+            <FormItem className="flex flex-col">
+              <FormLabel>brand</FormLabel>
+              <Popover>
+                <PopoverTrigger asChild>
                   <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a verified email to display" />
-                    </SelectTrigger>
-                  </FormControl>{" "}
-                  <SelectContent>
-                    <SelectItem value="">Select a manufacturer</SelectItem>
-                    {manufacturers.map((manufacturer: any) => (
-                      <SelectItem
-                        key={manufacturer.id}
-                        value={manufacturer.id.toString()}
-                      >
-                        {manufacturer.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </FormControl>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      className={cn(
+                        "w-[200px] justify-between",
+                        !field.value && "text-muted-foreground",
+                      )}
+                    >
+                      {field.value
+                        ? dropdownData.brands.find(
+                          (brand: any) => brand.value === field.value,
+                        )?.label
+                        : "Select brand"}
+                      <ChevronsUpDown className="opacity-50" />
+                    </Button>
+                  </FormControl>
+                </PopoverTrigger>
+                <PopoverContent className="w-[200px] p-0">
+                  <Command>
+                    <CommandInput
+                      placeholder="Search framework..."
+                      className="h-9"
+                    />
+                    <CommandList>
+                      <CommandEmpty>No framework found.</CommandEmpty>
+                      <CommandGroup>
+                        {dropdownData.brands.map((brand: any) => (
+                          <CommandItem
+                            value={brand.label}
+                            key={brand.value}
+                            onSelect={() => {
+                              form.setValue("brand_id", brand.value);
+                            }}
+                          >
+                            {brand.label}
+                            <Check
+                              className={cn(
+                                "ml-auto",
+                                brand.value === field.value
+                                  ? "opacity-100"
+                                  : "opacity-0",
+                              )}
+                            />
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+              <FormDescription>
+                This is the brand that will be used in the dashboard.
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
-        /> */}
+        />
+        <Autocomplete<any>
+          onChange={(value) => {
+            form.setValue("brand_id", Number(value));
+            form.setValue("newBrand", "");
+          }}
+          onCreate={(name) => {
+            form.setValue("newBrand", name);
+            form.setValue("brand_id", null);
+          }}
+          fetchSuggestions={fetchBrands}
+          placeholder="Select or create brand..."
+        />
+
         <FormField
           control={form.control}
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Name</FormLabel>
+              <FormLabel>*نام محصول</FormLabel>
               <FormControl>
-                <Input {...field} />
+                <Input placeholder="" {...field} />
               </FormControl>
-              <FormDescription>Product name</FormDescription>
+              <FormDescription>نام محصول را وارد کنید</FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -136,11 +207,13 @@ export default function ProductForm({ dropdownData }: { dropdownData: any }) {
           name="description"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Description</FormLabel>
+              <FormLabel>*توضیحات</FormLabel>
               <FormControl>
-                <Input {...field} />
+                <Textarea placeholder="" {...field} />
               </FormControl>
-              <FormDescription>Product description</FormDescription>
+              <FormDescription>
+                توضیحات درباره محصول را وارد کنید
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -150,193 +223,569 @@ export default function ProductForm({ dropdownData }: { dropdownData: any }) {
           name="price"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Price</FormLabel>
+              <FormLabel>*قیمت (تومان)</FormLabel>
               <FormControl>
                 <Input
                   type="number"
+                  placeholder=""
                   {...field}
-                  onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                  value={field.value || ""}
+                  onChange={(e) => field.onChange(e.target.valueAsNumber)}
                 />
               </FormControl>
-              <FormDescription>Product price</FormDescription>
+              <FormDescription>قیمت محصول را وارد کنید</FormDescription>
               <FormMessage />
             </FormItem>
           )}
         />
+        <div className="sm:flex flex-wrap justify-between gap-4 [&>*]:flex-1">
+          <FormField
+            control={form.control}
+            name="SKU"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>*کد کالا</FormLabel>
+                <FormControl>
+                  <Input placeholder="" {...field} />
+                </FormControl>
+                <FormDescription>
+                  کد یا شناسه کالا را وارد کنید{" "}
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="stock"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>*تعداد</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    placeholder=""
+                    {...field}
+                    onChange={(e) =>
+                      field.onChange(
+                        e.target.value ? Number(e.target.value) : "",
+                      )
+                    }
+                  />
+                </FormControl>
+                <FormDescription>
+                  تعداد محصول موجود در انبار را وارد کنید
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
         <FormField
           control={form.control}
-          name="SKU"
+          name="category_id"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>SKU</FormLabel>
-              <FormControl>
-                <Input {...field} />
-              </FormControl>
-              <FormDescription>Stock Keeping Unit</FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="stock"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Stock</FormLabel>
-              <FormControl>
-                <Input
-                  type="number"
-                  {...field}
-                  onChange={(e) => field.onChange(parseInt(e.target.value))}
-                />
-              </FormControl>
-              <FormDescription>Available stock</FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="min_order_quantity"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Minimum Order Quantity</FormLabel>
-              <FormControl>
-                <Input
-                  type="number"
-                  {...field}
-                  onChange={(e) =>
-                    field.onChange(
-                      e.target.value ? parseInt(e.target.value) : undefined
-                    )
-                  }
-                />
-              </FormControl>
+              <FormLabel>*دسته بندی</FormLabel>
+              <Select
+                onValueChange={(value) => field.onChange(parseInt(value, 10))} // Convert to number
+                defaultValue={field.value?.toString()}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="انتخاب دسته‌بندی" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {dropdownData.categories.map((category: Category) => (
+                    <SelectItem
+                      key={category.id}
+                      value={category.id.toString()}
+                    >
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <FormDescription>
-                Minimum order quantity (optional)
+                دسته‌بندی مستقیم (نزدیکترین دسته‌بندی) را وارد کنید{" "}
               </FormDescription>
               <FormMessage />
             </FormItem>
           )}
         />
-        <FormField
-          control={form.control}
-          name="max_order_quantity"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Maximum Order Quantity</FormLabel>
-              <FormControl>
-                <Input
-                  type="number"
-                  {...field}
-                  onChange={(e) =>
-                    field.onChange(
-                      e.target.value ? parseInt(e.target.value) : undefined
-                    )
-                  }
-                />
-              </FormControl>
-              <FormDescription>
-                Maximum order quantity (optional)
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="weight"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Weight</FormLabel>
-              <FormControl>
-                <Input
-                  type="number"
-                  {...field}
-                  onChange={(e) =>
-                    field.onChange(
-                      e.target.value ? parseFloat(e.target.value) : undefined
-                    )
-                  }
-                />
-              </FormControl>
-              <FormDescription>Product weight (optional)</FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="length"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Length</FormLabel>
-              <FormControl>
-                <Input
-                  type="number"
-                  {...field}
-                  onChange={(e) =>
-                    field.onChange(
-                      e.target.value ? parseFloat(e.target.value) : undefined
-                    )
-                  }
-                />
-              </FormControl>
-              <FormDescription>Product length (optional)</FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="width"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Width</FormLabel>
-              <FormControl>
-                <Input
-                  type="number"
-                  {...field}
-                  onChange={(e) =>
-                    field.onChange(
-                      e.target.value ? parseFloat(e.target.value) : undefined
-                    )
-                  }
-                />
-              </FormControl>
-              <FormDescription>Product width (optional)</FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="height"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Height</FormLabel>
-              <FormControl>
-                <Input
-                  type="number"
-                  {...field}
-                  onChange={(e) =>
-                    field.onChange(
-                      e.target.value ? parseFloat(e.target.value) : undefined
-                    )
-                  }
-                />
-              </FormControl>
-              <FormDescription>Product height (optional)</FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <Button type="submit">Create Product</Button>
+        <div className="sm:flex flex-wrap items-center justify-between gap-4 [&>*]:flex-1">
+          <FormField
+            control={form.control}
+            name="min_order_quantity"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>حداقل سفارش</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    placeholder=""
+                    {...field}
+                    value={field.value || ""}
+                    onChange={(e) => field.onChange(e.target.valueAsNumber)}
+                  />
+                </FormControl>
+                <FormDescription>
+                  حداقل مقدار/تعداد قابل سفارش را وارد کنید
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="max_order_quantity"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>حداکثر سفارش</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    placeholder=""
+                    {...field}
+                    value={field.value || ""}
+                    onChange={(e) => field.onChange(e.target.valueAsNumber)}
+                  />
+                </FormControl>
+                <FormDescription>
+                  حداکثر مقدار/تعداد قابل سفارش را وارد کنید
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <div className="sm:flex flex-wrap items-center justify-between gap-4 [&>*]:flex-1">
+          <FormField
+            control={form.control}
+            name="weight"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>وزن (گرم)</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    placeholder=""
+                    {...field}
+                    value={field.value || ""}
+                    onChange={(e) => field.onChange(e.target.valueAsNumber)}
+                  />
+                </FormControl>
+                <FormDescription>وزن محصول با احتساب بسته‌بندی</FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="length"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>طول (سانتیمتر)</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    placeholder=""
+                    {...field}
+                    value={field.value || ""}
+                    onChange={(e) => field.onChange(e.target.valueAsNumber)}
+                  />
+                </FormControl>
+                <FormDescription>طول محصول با احتساب بسته‌بندی</FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="width"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>عرض (سانتیمتر)</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    placeholder=""
+                    {...field}
+                    value={field.value || ""}
+                    onChange={(e) => field.onChange(e.target.valueAsNumber)}
+                  />
+                </FormControl>
+                <FormDescription>عرض محصول با احتساب بسته‌بندی</FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="height"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>ارتفاع (سانتیمتر)</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    placeholder=""
+                    {...field}
+                    value={field.value || ""}
+                    onChange={(e) => field.onChange(e.target.valueAsNumber)}
+                  />
+                </FormControl>
+                <FormDescription>
+                  ارتفاع محصول با احتساب بسته‌بندی
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+        <Button type="submit">Submit</Button>
       </form>
     </Form>
   );
 }
 
+//"use client";
+//
+//import { useForm } from "react-hook-form";
+//import { zodResolver } from "@hookform/resolvers/zod";
+//import { createNewProduct } from "./actions";
+//import { Button } from "@/components/ui/button";
+//import {
+//  Form,
+//  FormControl,
+//  FormDescription,
+//  FormField,
+//  FormItem,
+//  FormLabel,
+//  FormMessage,
+//} from "@/components/ui/form";
+//import { Input } from "@/components/ui/input";
+//import { useToast } from "@/hooks/use-toast";
+//import { useActionState } from "react";
+//import {
+//  Select,
+//  SelectContent,
+//  SelectItem,
+//  SelectTrigger,
+//  SelectValue,
+//} from "@/components/ui/select";
+//import {
+//  newProductSchema,
+//  NewProductSchema,
+//} from "@/types/zod-schemas/products";
+//import { Category } from "@/db/schema";
+//
+//export default function ProductForm({ dropdownData }: { dropdownData: any }) {
+//  const { brands, manufacturers, categories, discounts, warranties } =
+//    dropdownData;
+//
+//  const form = useForm<NewProductSchema>({
+//    resolver: zodResolver(newProductSchema),
+//    defaultValues: {
+//      name: "",
+//      description: "",
+//      price: 0,
+//      SKU: "",
+//      stock: 0,
+//      min_order_quantity: undefined,
+//      max_order_quantity: undefined,
+//      weight: undefined,
+//      length: undefined,
+//      width: undefined,
+//      height: undefined,
+//      brand_id: undefined,
+//      manufacturer_id: undefined,
+//      category_id: undefined,
+//      discount_id: undefined,
+//      warranty_id: undefined,
+//    },
+//  });
+//
+//  const [state, formAction] = useActionState(createNewProduct, {
+//    message: "",
+//    success: false,
+//  });
+//
+//  const onSubmit = (data: NewProductSchema) => {
+//    const formData = new FormData();
+//    Object.entries(data).forEach(([key, value]) => {
+//      if (value !== undefined) {
+//        formData.append(key, value.toString());
+//      }
+//    });
+//    formAction(formData);
+//  };
+//
+//  return (
+//    <Form {...form}>
+//      <form
+//        action={formAction}
+//        onSubmit={form.handleSubmit(onSubmit)}
+//        className="space-y-8 max-w-3xl"
+//      >
+//        <FormField
+//          control={form.control}
+//          name="category_id"
+//          render={({ field }) => (
+//            <FormItem>
+//              <FormLabel>دسته بندی</FormLabel>
+//              <Select
+//                onValueChange={(value) =>
+//                  field.onChange(value ? 0.parseInt(value) : undefined)
+//                }
+//                defaultValue={field.value?.toString()}
+//              >
+//                <FormControl>
+//                  <SelectTrigger>
+//                    <SelectValue placeholder="یک دسته‌بندی را انتخاب کنید" />
+//                  </SelectTrigger>
+//                </FormControl>
+//                <SelectContent>
+//                  {categories.map((category: Category) => (
+//                    <SelectItem
+//                      key={category.id}
+//                      value={category.id.toString()}
+//                    >
+//                      {category.name}
+//                    </SelectItem>
+//                  ))}
+//                </SelectContent>
+//              </Select>
+//              <FormDescription>
+//                نزدیکترین دسته بندی را انتخاب کنید (اختیاری)
+//              </FormDescription>
+//              <FormMessage />
+//            </FormItem>
+//          )}
+//        />
+//
+//        <FormField
+//          control={form.control}
+//          name="name"
+//          render={({ field }) => (
+//            <FormItem>
+//              <FormLabel>Name</FormLabel>
+//              <FormControl>
+//                <Input {...field} />
+//              </FormControl>
+//              <FormDescription>Product name</FormDescription>
+//              <FormMessage />
+//            </FormItem>
+//          )}
+//        />
+//        <FormField
+//          control={form.control}
+//          name="description"
+//          render={({ field }) => (
+//            <FormItem>
+//              <FormLabel>Description</FormLabel>
+//              <FormControl>
+//                <Input {...field} />
+//              </FormControl>
+//              <FormDescription>Product description</FormDescription>
+//              <FormMessage />
+//            </FormItem>
+//          )}
+//        />
+//        <FormField
+//          control={form.control}
+//          name="price"
+//          render={({ field }) => (
+//            <FormItem>
+//              <FormLabel>Price</FormLabel>
+//              <FormControl>
+//                <Input
+//                  type="0"
+//                  {...field}
+//                  onChange={(e) => field.onChange(parseFloat(e.target.value))}
+//                />
+//              </FormControl>
+//              <FormDescription>Product price</FormDescription>
+//              <FormMessage />
+//            </FormItem>
+//          )}
+//        />
+//        <FormField
+//          control={form.control}
+//          name="SKU"
+//          render={({ field }) => (
+//            <FormItem>
+//              <FormLabel>SKU</FormLabel>
+//              <FormControl>
+//                <Input {...field} />
+//              </FormControl>
+//              <FormDescription>Stock Keeping Unit</FormDescription>
+//              <FormMessage />
+//            </FormItem>
+//          )}
+//        />
+//        <FormField
+//          control={form.control}
+//          name="stock"
+//          render={({ field }) => (
+//            <FormItem>
+//              <FormLabel>Stock</FormLabel>
+//              <FormControl>
+//                <Input
+//                  type="0"
+//                  {...field}
+//                  onChange={(e) => field.onChange(parseInt(e.target.value))}
+//                />
+//              </FormControl>
+//              <FormDescription>Available stock</FormDescription>
+//              <FormMessage />
+//            </FormItem>
+//          )}
+//        />
+//        <FormField
+//          control={form.control}
+//          name="min_order_quantity"
+//          render={({ field }) => (
+//            <FormItem>
+//              <FormLabel>Minimum Order Quantity</FormLabel>
+//              <FormControl>
+//                <Input
+//                  type="0"
+//                  {...field}
+//                  onChange={(e) =>
+//                    field.onChange(
+//                      e.target.value ? parseInt(e.target.value) : undefined,
+//                    )
+//                  }
+//                />
+//              </FormControl>
+//              <FormDescription>
+//                Minimum order quantity (optional)
+//              </FormDescription>
+//              <FormMessage />
+//            </FormItem>
+//          )}
+//        />
+//        <FormField
+//          control={form.control}
+//          name="max_order_quantity"
+//          render={({ field }) => (
+//            <FormItem>
+//              <FormLabel>Maximum Order Quantity</FormLabel>
+//              <FormControl>
+//                <Input
+//                  type="0"
+//                  {...field}
+//                  onChange={(e) =>
+//                    field.onChange(
+//                      e.target.value ? parseInt(e.target.value) : undefined,
+//                    )
+//                  }
+//                />
+//              </FormControl>
+//              <FormDescription>
+//                Maximum order quantity (optional)
+//              </FormDescription>
+//              <FormMessage />
+//            </FormItem>
+//          )}
+//        />
+//        <FormField
+//          control={form.control}
+//          name="weight"
+//          render={({ field }) => (
+//            <FormItem>
+//              <FormLabel>Weight</FormLabel>
+//              <FormControl>
+//                <Input
+//                  type="0"
+//                  {...field}
+//                  onChange={(e) =>
+//                    field.onChange(
+//                      e.target.value ? parseFloat(e.target.value) : undefined,
+//                    )
+//                  }
+//                />
+//              </FormControl>
+//              <FormDescription>Product weight (optional)</FormDescription>
+//              <FormMessage />
+//            </FormItem>
+//          )}
+//        />
+//        <FormField
+//          control={form.control}
+//          name="length"
+//          render={({ field }) => (
+//            <FormItem>
+//              <FormLabel>Length</FormLabel>
+//              <FormControl>
+//                <Input
+//                  type="0"
+//                  {...field}
+//                  onChange={(e) =>
+//                    field.onChange(
+//                      e.target.value ? parseFloat(e.target.value) : undefined,
+//                    )
+//                  }
+//                />
+//              </FormControl>
+//              <FormDescription>Product length (optional)</FormDescription>
+//              <FormMessage />
+//            </FormItem>
+//          )}
+//        />
+//        <FormField
+//          control={form.control}
+//          name="width"
+//          render={({ field }) => (
+//            <FormItem>
+//              <FormLabel>Width</FormLabel>
+//              <FormControl>
+//                <Input
+//                  type="0"
+//                  {...field}
+//                  onChange={(e) =>
+//                    field.onChange(
+//                      e.target.value ? parseFloat(e.target.value) : undefined,
+//                    )
+//                  }
+//                />
+//              </FormControl>
+//              <FormDescription>Product width (optional)</FormDescription>
+//              <FormMessage />
+//            </FormItem>
+//          )}
+//        />
+//        <FormField
+//          control={form.control}
+//          name="height"
+//          render={({ field }) => (
+//            <FormItem>
+//              <FormLabel>Height</FormLabel>
+//              <FormControl>
+//                <Input
+//                  type="0"
+//                  {...field}
+//                  onChange={(e) =>
+//                    field.onChange(
+//                      e.target.value ? parseFloat(e.target.value) : undefined,
+//                    )
+//                  }
+//                />
+//              </FormControl>
+//              <FormDescription>Product height (optional)</FormDescription>
+//              <FormMessage />
+//            </FormItem>
+//          )}
+//        />
+//        <Button type="submit">Create Product</Button>
+//      </form>
+//    </Form>
+//  );
+//}
+//
 // 'use client';
 
 // import { CustomerField } from '@/app/lib/definitions';
@@ -403,7 +852,7 @@ export default function ProductForm({ dropdownData }: { dropdownData: any }) {
 //               <input
 //                 id="amount"
 //                 name="amount"
-//                 type="number"
+//                 type="0"
 //                 step="0.01"
 //                 placeholder="Enter USD amount"
 //                 className="peer block w-full rounded-md border border-gray-200 py-2 pl-10 text-sm outline-2 placeholder:text-gray-500"

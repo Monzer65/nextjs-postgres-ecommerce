@@ -14,13 +14,13 @@ type FormState = {
 
 export async function createNewProduct(
   _prevstate: FormState,
-  formData: FormData
+  formData: FormData,
 ): Promise<FormState> {
   const data = Object.fromEntries(formData.entries());
   console.log("Form Data", data);
 
   const fields: Record<string, string> = Object.fromEntries(
-    Object.entries(formData).map(([key, value]) => [key, value.toString()])
+    Object.entries(formData).map(([key, value]) => [key, value.toString()]),
   );
 
   const parsedData = newProductSchema.safeParse(data);
@@ -54,38 +54,38 @@ export async function createNewProduct(
     warranty_id,
   } = parsedData.data;
 
-  try {
-    await db
-      .insertInto("product")
-      .values({
-        name,
-        description,
-        price,
-        SKU,
-        stock,
-        min_order_quantity,
-        max_order_quantity,
-        weight,
-        length,
-        width,
-        height,
-        brand_id: brand_id ?? null,
-        manufacturer_id: manufacturer_id ?? null,
-        category_id,
-        discount_id: discount_id ?? null,
-        warranty_id: warranty_id ?? null,
-        updated_at: new Date(),
-        created_at: new Date().toISOString(),
-        deleted_at: null,
-      })
-      .execute();
-  } catch (error) {
-    return {
-      message: "Database Error: Failed to Create Product.",
-      success: false,
-    };
-  }
-
+  //try {
+  //  await db
+  //    .insertInto("product")
+  //    .values({
+  //      name,
+  //      description,
+  //      price,
+  //      SKU,
+  //      stock,
+  //      min_order_quantity,
+  //      max_order_quantity,
+  //      weight,
+  //      length,
+  //      width,
+  //      height,
+  //      brand_id: brand_id ?? null,
+  //      manufacturer_id: manufacturer_id ?? null,
+  //      category_id,
+  //      discount_id: discount_id ?? null,
+  //      warranty_id: warranty_id ?? null,
+  //      updated_at: new Date(),
+  //      created_at: new Date().toISOString(),
+  //      deleted_at: null,
+  //    })
+  //    .execute();
+  //} catch (error) {
+  //  return {
+  //    message: "Database Error: Failed to Create Product.",
+  //    success: false,
+  //  };
+  //}
+  //
   revalidatePath("/admin/dashboard/products");
   redirect("/admin/dashboard/products");
 }

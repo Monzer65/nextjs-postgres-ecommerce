@@ -2,7 +2,7 @@ import HeaderAdmin from "@/components/admin-header";
 import ProductForm from "./form";
 import { fetchDropdownData } from "@/lib/admin/data";
 import { Suspense } from "react";
-import { Skeleton } from "@/components/ui/skeleton";
+//import { Skeleton } from "@/components/ui/skeleton";
 
 export default async function AddNewProductPage() {
   const items = [
