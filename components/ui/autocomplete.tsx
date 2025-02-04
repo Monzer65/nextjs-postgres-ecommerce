@@ -1,156 +1,160 @@
-"use client";
-
-import { useState, useCallback, useEffect } from "react";
-import { useDebounce } from "use-debounce";
+import { cn } from "@/lib/utils";
+import { Command as CommandPrimitive } from "cmdk";
+import { Check } from "lucide-react";
+import { useMemo, useState } from "react";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Search, Plus } from "lucide-react";
+import {
+  Popover,
+  PopoverAnchor,
+  PopoverContent,
+} from "@/components/ui/popover";
+import { Skeleton } from "@/components/ui/skeleton";
 
-interface Entity {
-  id: string | number;
-  name: string;
-}
-
-interface AutoCompleteProps<T extends Entity> {
-  value?: string;
-  onChangeAction: (value: T["id"]) => void;
-  onCreate?: (name: string) => void;
-  fetchSuggestionsAction: (query: string) => Promise<T[]>;
+type Props<T extends string> = {
+  selectedValue: T;
+  onSelectedValueChange: (value: T) => void;
+  searchValue: string;
+  onSearchValueChange: (value: string) => void;
+  items: { value: T; label: string }[];
+  isLoading?: boolean;
+  emptyMessage?: string;
   placeholder?: string;
-}
+};
 
-export default function Autocomplete<T extends Entity>({
-  value = "",
-  onChangeAction,
-  onCreate,
-  fetchSuggestionsAction,
+export function AutoComplete<T extends string>({
+  selectedValue,
+  onSelectedValueChange,
+  searchValue,
+  onSearchValueChange,
+  items,
+  isLoading,
+  emptyMessage = "No items.",
   placeholder = "Search...",
-}: AutoCompleteProps<T>) {
-  const [query, setQuery] = useState(value);
-  const [debouncedQuery] = useDebounce(query, 300);
-  const [suggestions, setSuggestions] = useState<T[]>([]);
-  const [selectedIndex, setSelectedIndex] = useState(-1);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isFocused, setIsFocused] = useState(false);
+}: Props<T>) {
+  const [open, setOpen] = useState(false);
 
-  const fetchSuggestionsActionCallback = useCallback(
-    async (q: string) => {
-      setIsLoading(true);
-      try {
-        const results = await fetchSuggestionsAction(q);
-        setSuggestions(results);
-      } catch (error) {
-        console.error("Error fetching suggestions:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [fetchSuggestionsAction],
+  const labels = useMemo(
+    () =>
+      items.reduce(
+        (acc, item) => {
+          acc[item.value] = item.label;
+          return acc;
+        },
+        {} as Record<string, string>,
+      ),
+    [items],
   );
 
-  useEffect(() => {
-    if (debouncedQuery && isFocused) {
-      fetchSuggestionsActionCallback(debouncedQuery);
+  const reset = () => {
+    onSelectedValueChange("" as T);
+    onSearchValueChange("");
+  };
+
+  const onInputBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    if (
+      !e.relatedTarget?.hasAttribute("cmdk-list") &&
+      labels[selectedValue] !== searchValue
+    ) {
+      reset();
+    }
+  };
+
+  //const onSelectItem = (inputValue: string) => {
+  //  if (inputValue === selectedValue) {
+  //    reset();
+  //  } else {
+  //    onSelectedValueChange(inputValue as T);
+  //    onSearchValueChange(labels[inputValue] ?? "");
+  //  }
+  //  setOpen(false);
+  //};
+  // Update the onSelectItem function in AutoComplete component
+  const onSelectItem = (inputValue: string) => {
+    if (inputValue === selectedValue) {
+      reset();
     } else {
-      setSuggestions([]);
+      onSelectedValueChange(inputValue as T);
+      // Find the selected item to get the correct label
+      const selectedItem = items.find((item) => item.value === inputValue);
+      onSearchValueChange(selectedItem?.label ?? "");
     }
-  }, [debouncedQuery, fetchSuggestionsActionCallback, isFocused]);
-
-  const showCreateOption =
-    onCreate &&
-    debouncedQuery &&
-    !suggestions.some(
-      (s) => s.name.toLowerCase() === debouncedQuery.toLowerCase(),
-    );
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value;
-    setQuery(newValue);
-    onChangeAction(newValue);
-    setSelectedIndex(-1);
+    setOpen(false);
   };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      setSelectedIndex((prev) =>
-        Math.min(prev + 1, suggestions.length + (showCreateOption ? 1 : 0) - 1),
-      );
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      setSelectedIndex((prev) => Math.max(prev - 1, -1));
-    } else if (e.key === "Enter" && selectedIndex >= 0) {
-      e.preventDefault();
-      handleSelection(selectedIndex);
-    }
-  };
-
-  const handleSelection = (index: number) => {
-    if (showCreateOption && index === suggestions.length) {
-      onCreate(query);
-      setQuery("");
-      onChangeAction("");
-    } else {
-      const selected = suggestions[index];
-      setQuery(selected.name);
-      onChangeAction(selected.id);
-    }
-    setSuggestions([]);
-    setSelectedIndex(-1);
-  };
-
   return (
-    <div className="relative w-full">
-      <Input
-        type="text"
-        placeholder={placeholder}
-        value={query}
-        onChange={handleInputChange}
-        onKeyDown={handleKeyDown}
-        onFocus={() => setIsFocused(true)}
-        onBlur={() => setTimeout(() => setIsFocused(false), 200)}
-        className="pr-10"
-      />
-
-      <Button
-        size="icon"
-        variant="ghost"
-        className="absolute right-0 top-0 h-full"
-        type="button"
-      >
-        <Search className="h-4 w-4" />
-      </Button>
-
-      {isFocused && (
-        <div className="absolute top-full mt-1 w-full bg-background border rounded-md shadow-lg z-50">
-          {isLoading ? (
-            <div className="p-2 text-muted-foreground">Loading...</div>
-          ) : (
-            <>
-              {suggestions.map((item, index) => (
-                <div
-                  key={item.id}
-                  className={`p-2 cursor-pointer hover:bg-muted ${index === selectedIndex ? "bg-muted" : ""
-                    }`}
-                  onMouseDown={() => handleSelection(index)}
-                >
-                  {item.name}
-                </div>
-              ))}
-              {showCreateOption && (
-                <div
-                  className={`p-2 cursor-pointer hover:bg-muted flex items-center gap-2 text-primary ${selectedIndex === suggestions.length ? "bg-muted" : ""
-                    }`}
-                  onMouseDown={() => handleSelection(suggestions.length)}
-                >
-                  <Plus className="h-4 w-4" />
-                  جدید بساز <span className="text-blue-500">"{query}"</span>
-                </div>
+    <div className="flex items-center">
+      <Popover open={open} onOpenChange={setOpen}>
+        <Command shouldFilter={false}>
+          <PopoverAnchor asChild>
+            <CommandPrimitive.Input
+              asChild
+              value={searchValue}
+              onValueChange={onSearchValueChange}
+              onKeyDown={(e) => setOpen(e.key !== "Escape")}
+              onMouseDown={() => setOpen((open) => !!searchValue || !open)}
+              onFocus={() => setOpen(true)}
+              //onBlur={onInputBlur}
+            >
+              <Input placeholder={placeholder} />
+            </CommandPrimitive.Input>
+          </PopoverAnchor>
+          {!open && <CommandList aria-hidden="true" className="hidden" />}
+          <PopoverContent
+            asChild
+            onOpenAutoFocus={(e) => e.preventDefault()}
+            onInteractOutside={(e) => {
+              if (
+                e.target instanceof Element &&
+                e.target.hasAttribute("cmdk-input")
+              ) {
+                e.preventDefault();
+              }
+            }}
+            className="w-[--radix-popover-trigger-width] p-0"
+          >
+            <CommandList>
+              {isLoading && (
+                <CommandPrimitive.Loading>
+                  <div className="p-1">
+                    <Skeleton className="h-6 w-full" />
+                  </div>
+                </CommandPrimitive.Loading>
               )}
-            </>
-          )}
-        </div>
-      )}
+              {items.length > 0 && !isLoading ? (
+                <CommandGroup>
+                  {items.map((option) => (
+                    <CommandItem
+                      key={option.value}
+                      value={option.value}
+                      onMouseDown={(e) => e.preventDefault()}
+                      onSelect={onSelectItem}
+                    >
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          selectedValue === option.value
+                            ? "opacity-100"
+                            : "opacity-0",
+                        )}
+                      />
+                      {option.label}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              ) : null}
+              {!isLoading ? (
+                <CommandEmpty>{emptyMessage ?? "No items."}</CommandEmpty>
+              ) : null}
+            </CommandList>
+          </PopoverContent>
+        </Command>
+      </Popover>
     </div>
   );
 }

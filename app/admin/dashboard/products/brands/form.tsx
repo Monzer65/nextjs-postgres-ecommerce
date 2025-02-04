@@ -13,18 +13,14 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Brand } from "@/db/schema";
 import { Textarea } from "@/components/ui/textarea";
-import { Check, ChevronsUpDown, Loader, Save } from "lucide-react";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
-import { startTransition, useActionState, useState } from "react";
+import { Loader, Save } from "lucide-react";
+import { startTransition, useActionState } from "react";
 
 import { createNewBrand } from "./actions";
-import { useRouter } from "next/navigation";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export function BrandForm() {
-  const router = useRouter();
   const form = useForm<BrandSchemaType>({
     resolver: zodResolver(brandSchema),
     defaultValues: {
@@ -55,7 +51,11 @@ export function BrandForm() {
         {state.message && (
           <Alert variant={state.success ? "default" : "destructive"}>
             <AlertTitle>{state.success ? "موفق" : "خطا"}</AlertTitle>
-            <AlertDescription>{state.message}</AlertDescription>
+            <AlertDescription
+              className={`${state.success && "text-green-400"}`}
+            >
+              {state.message}
+            </AlertDescription>
           </Alert>
         )}
 
@@ -94,7 +94,7 @@ export function BrandForm() {
             </FormItem>
           )}
         />
-        <Button type="submit" disabled={isPending}>
+        <Button type="submit" disabled={isPending} className="mt-8">
           {isPending ? (
             <Loader className="w-4 h-4  animate-spin" />
           ) : (

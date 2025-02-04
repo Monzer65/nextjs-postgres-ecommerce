@@ -3,7 +3,7 @@
 import { productSchema, ProductSchemaType } from "@/types/zod-schemas/products";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Form,
   FormControl,
@@ -25,16 +25,36 @@ import { toast } from "sonner";
 import { Brand, Category } from "@/db/schema";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import Link from "next/link";
+import { getBrands } from "@/lib/admin/data";
+import { AutoComplete } from "@/components/ui/autocomplete";
+import { useQuery } from "@tanstack/react-query";
 
 export default function ProductForm({ dropdownData }: { dropdownData: any }) {
-  const [brandList, setBrandList] = useState(dropdownData.brands);
-  const [manufacturerList, setManufacturerList] = useState(
-    dropdownData.manufacturers,
-  );
-  const [newBrand, setNewBrand] = useState("");
-  const [newManufacturer, setNewManufacturer] = useState("");
+  const [searchValue, setSearchValue] = useState<string>("");
+  const [selectedValue, setSelectedValue] = useState<string>("");
+  const { data, isLoading } = useQuery({
+    queryKey: ["brandsData", searchValue],
+    queryFn: async () => {
+      const response = await fetch(`/api/brands?filter=${searchValue}`);
+      return response.json();
+    },
+  });
+
+  useEffect(() => {
+    if (selectedValue) {
+      console.log("Selected brand ID:", selectedValue);
+
+      // Optional: Find the full brand object if you have access to the data
+      const selectedBrand = data?.find(
+        (brand: Brand) => brand.name === selectedValue,
+      );
+      if (selectedBrand) {
+        console.log("Full brand details:", selectedBrand);
+      }
+    }
+  }, [selectedValue, data]);
 
   const form = useForm<ProductSchemaType>({
     resolver: zodResolver(productSchema),
@@ -76,43 +96,79 @@ export default function ProductForm({ dropdownData }: { dropdownData: any }) {
     }
   };
 
+  useEffect(() => {
+    form.setValue("brand_id", selectedValue ? parseInt(selectedValue) : null);
+  }, [selectedValue, form]);
+
   return (
     <Form {...form}>
       <form
         onSubmit={form.handleSubmit(onSubmit)}
         className="space-y-8 max-w-lg border shadow-black p-2 rounded-md"
       >
-        <FormField
-          control={form.control}
-          name="brand_id"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Brand</FormLabel>
-              <div className="flex gap-2">
-                <Select
-                  onValueChange={field.onChange}
-                  value={field.value?.toString()}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a brand" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {brandList.map((brand: Brand) => (
-                      <SelectItem key={brand.id} value={String(brand.id)}>
-                        {brand.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Link href="/admin/dashboard/products/brands">برند جدید</Link>
-              </div>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
+        <div className="flex gap-4 w-full [&>*:first-child]:flex-1">
+          <AutoComplete
+            selectedValue={selectedValue}
+            onSelectedValueChange={setSelectedValue}
+            searchValue={searchValue}
+            onSearchValueChange={setSearchValue}
+            items={data ?? []}
+            isLoading={isLoading}
+            emptyMessage="No brands found."
+            placeholder="Search brands..."
+          />
+          <Link
+            className={buttonVariants({ variant: "link" })}
+            href="/admin/dashboard/products/brands"
+          >
+            برند جدید
+          </Link>
+        </div>
+        {/* //<AutoComplete
+          //  selectedValue={selectedValue}
+          //  onSelectedValueChange={setSelectedValue}
+          //  searchValue={searchValue}
+          //  onSearchValueChange={setSearchValue}
+          //  items={data ?? []}
+          //  isLoading={isLoading}
+          //  emptyMessage="No pokemon found."
+          ///>
+         //<FormField
+        //  control={form.control}
+        //  name="brand_id"
+        //  render={({ field }) => (
+        //    <FormItem>
+        //      <FormLabel>Brand</FormLabel>
+        //      <div className="flex gap-2">
+        //        <Select
+        //          onValueChange={field.onChange}
+        //          value={field.value?.toString()}
+        //        >
+        //          <FormControl>
+        //            <SelectTrigger>
+        //              <SelectValue placeholder="Select a brand" />
+        //            </SelectTrigger>
+        //          </FormControl>
+        //          <SelectContent>
+        //            {brandList.map((brand: Brand) => (
+        //              <SelectItem key={brand.id} value={String(brand.id)}>
+        //                {brand.name}
+        //              </SelectItem>
+        //            ))}
+        //          </SelectContent>
+        //        </Select>
+        //        <Link
+        //          className={buttonVariants({ variant: "link" })}
+        //          href="/admin/dashboard/products/brands"
+        //        >
+        //          برند جدید
+        //        </Link>
+        //      </div>
+        //      <FormMessage />
+        //    </FormItem>
+        //  )}
+        ///>
+        //*/}
         <FormField
           control={form.control}
           name="name"

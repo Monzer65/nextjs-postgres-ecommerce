@@ -1,8 +1,8 @@
 "use server";
-import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
+
 import { db } from "@/db/db";
 import { brandSchema } from "@/types/zod-schemas/products";
+import { revalidatePath } from "next/cache";
 
 type FormState = {
   message?: string;
@@ -29,32 +29,48 @@ export async function createNewBrand(
     };
   }
 
-  const { name: validatedName, description: validatedDescription } =
-    parsedData.data;
+  // **Sanitize the name** (trim, lowercase, remove extra spaces)
+  const sanitizedName = parsedData.data.name
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+  const sanitizedDescription = parsedData.data.description?.trim() || null;
 
   try {
+    // Check for an existing brand with the sanitized name
+    const existingBrand = await db
+      .selectFrom("brand")
+      .select("name")
+      .where("name", "=", sanitizedName) // Case-insensitive check
+      .executeTakeFirst();
+
+    if (existingBrand) {
+      return { message: "این برند قبلا ذخیره شده است", success: false };
+    }
+
+    // Insert sanitized values
     const result = await db
       .insertInto("brand")
       .values({
-        name: validatedName,
-        description: validatedDescription,
+        name: sanitizedName,
+        description: sanitizedDescription,
         updated_at: new Date(),
         created_at: new Date().toISOString(),
       })
       .returningAll()
       .execute();
-
+    revalidatePath("/admin/dashboard/products/add");
     return {
       message: "برند با موفقیت ذخیره شد",
       success: true,
       data: result[0],
     };
   } catch (error) {
-    console.error("Database Error:", error); // Logs the actual error
+    console.error("Database Error:", error);
     return {
       message: "خطای دیتابیس. برند در دیتابیس ذخیره نشد",
       success: false,
-      issues: [error instanceof Error ? error.message : "Unknown error"], // More informative error message
+      issues: [error instanceof Error ? error.message : "Unknown error"],
     };
   }
 }
