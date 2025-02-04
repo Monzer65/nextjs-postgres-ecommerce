@@ -3,13 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/db/db";
-import { newProductSchema } from "@/types/zod-schemas/products";
+import { brandSchema, productSchema } from "@/types/zod-schemas/products";
 
 type FormState = {
   message?: string;
   fields?: Record<string, string>;
   issues?: string[];
   success?: boolean;
+  data?: any;
 };
 
 export async function createNewProduct(
@@ -23,7 +24,7 @@ export async function createNewProduct(
     Object.entries(formData).map(([key, value]) => [key, value.toString()]),
   );
 
-  const parsedData = newProductSchema.safeParse(data);
+  const parsedData = productSchema.safeParse(data);
   console.log("Parsed Data", parsedData);
 
   if (!parsedData.success) {

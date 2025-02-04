@@ -12,7 +12,8 @@ export default async function AddNewProductPage() {
     { label: "محصول جدید" },
   ];
 
-  const dropdownData = await fetchDropdownData();
+  //const dropdownData = await fetchDropdownData();
+  const dropdownData = { categories: [], brands: [], manufacturers: [] };
 
   return (
     <>

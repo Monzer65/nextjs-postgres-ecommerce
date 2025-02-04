@@ -7,23 +7,23 @@ import { Button } from "@/components/ui/button";
 import { Search, Plus } from "lucide-react";
 
 interface Entity {
-  id: string;
+  id: string | number;
   name: string;
 }
 
 interface AutoCompleteProps<T extends Entity> {
   value?: string;
-  onChange: (value: string) => void;
+  onChangeAction: (value: T["id"]) => void;
   onCreate?: (name: string) => void;
-  fetchSuggestions: (query: string) => Promise<T[]>;
+  fetchSuggestionsAction: (query: string) => Promise<T[]>;
   placeholder?: string;
 }
 
 export default function Autocomplete<T extends Entity>({
   value = "",
-  onChange,
+  onChangeAction,
   onCreate,
-  fetchSuggestions,
+  fetchSuggestionsAction,
   placeholder = "Search...",
 }: AutoCompleteProps<T>) {
   const [query, setQuery] = useState(value);
@@ -33,11 +33,11 @@ export default function Autocomplete<T extends Entity>({
   const [isLoading, setIsLoading] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
 
-  const fetchSuggestionsCallback = useCallback(
+  const fetchSuggestionsActionCallback = useCallback(
     async (q: string) => {
       setIsLoading(true);
       try {
-        const results = await fetchSuggestions(q);
+        const results = await fetchSuggestionsAction(q);
         setSuggestions(results);
       } catch (error) {
         console.error("Error fetching suggestions:", error);
@@ -45,16 +45,16 @@ export default function Autocomplete<T extends Entity>({
         setIsLoading(false);
       }
     },
-    [fetchSuggestions],
+    [fetchSuggestionsAction],
   );
 
   useEffect(() => {
     if (debouncedQuery && isFocused) {
-      fetchSuggestionsCallback(debouncedQuery);
+      fetchSuggestionsActionCallback(debouncedQuery);
     } else {
       setSuggestions([]);
     }
-  }, [debouncedQuery, fetchSuggestionsCallback, isFocused]);
+  }, [debouncedQuery, fetchSuggestionsActionCallback, isFocused]);
 
   const showCreateOption =
     onCreate &&
@@ -66,7 +66,7 @@ export default function Autocomplete<T extends Entity>({
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
     setQuery(newValue);
-    onChange(newValue);
+    onChangeAction(newValue);
     setSelectedIndex(-1);
   };
 
@@ -89,11 +89,11 @@ export default function Autocomplete<T extends Entity>({
     if (showCreateOption && index === suggestions.length) {
       onCreate(query);
       setQuery("");
-      onChange("");
+      onChangeAction("");
     } else {
       const selected = suggestions[index];
       setQuery(selected.name);
-      onChange(selected.id);
+      onChangeAction(selected.id);
     }
     setSuggestions([]);
     setSelectedIndex(-1);
@@ -144,7 +144,7 @@ export default function Autocomplete<T extends Entity>({
                   onMouseDown={() => handleSelection(suggestions.length)}
                 >
                   <Plus className="h-4 w-4" />
-                  Create "{query}"
+                  جدید بساز <span className="text-blue-500">"{query}"</span>
                 </div>
               )}
             </>

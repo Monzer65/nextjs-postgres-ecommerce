@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { nullable, z } from "zod";
 
 // Define a Zod schema for the Product type
 export const productSchema = z
@@ -35,3 +35,13 @@ export const productSchema = z
 
 // Infer the type from the Zod schema
 export type ProductSchemaType = z.infer<typeof productSchema>;
+
+export const brandSchema = z.object({
+  id: z.number().optional(),
+  name: z.string().min(1, "نام برند ضروری است"),
+  description: z.string().nullable(),
+  created_at: z.date().optional(),
+  updated_at: z.date().optional(),
+});
+
+export type BrandSchemaType = z.infer<typeof brandSchema>;
