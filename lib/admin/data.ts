@@ -67,18 +67,17 @@ export async function fetchDropdownData() {
     return dropdownDataCache.data;
   }
 
-  const tables = ["brand", "manufacturer", "category", "discount", "warranty"];
-  const [brands, manufacturers, categories, discounts, warranties] =
-    await Promise.all(
-      tables.map((table) =>
-        db
-          .selectFrom(table as any)
-          .selectAll()
-          .execute(),
-      ),
-    );
+  const tables = ["category"];
+  const [categories] = await Promise.all(
+    tables.map((table) =>
+      db
+        .selectFrom(table as any)
+        .selectAll()
+        .execute(),
+    ),
+  );
 
-  const data = { brands, manufacturers, categories, discounts, warranties };
+  const data = { categories };
   dropdownDataCache = { data, timestamp: Date.now() };
   return data;
 }
@@ -112,36 +111,15 @@ export async function getCategoryById(id: string) {
 //    }));
 //}
 // Ensure your getFilteredBrands returns ID as value
-//export async function getFilteredBrands(filter: string) {
-//  const lowerFilter = filter.toLocaleLowerCase();
-//  const data = await db.selectFrom("brand").selectAll().execute();
-//
-//  return data
-//    .filter(({ name }) => name.toLocaleLowerCase().startsWith(lowerFilter))
-//    .slice(0, 20)
-//    .map(({ id, name }) => ({
-//      value: id.toString(), // Convert ID to string if needed
-//      label: name,
-//    }));
-//}
-import { sql } from "kysely";
-
 export async function getFilteredBrands(filter: string) {
-  const query = db
-    .selectFrom("brand")
-    .selectAll()
-    .where((eb) =>
-      eb.or([
-        // Use raw SQL for ILIKE
-        sql<boolean>`name ilike ${"%" + filter + "%"}`,
-        // Use raw SQL for similarity function
-        sql<boolean>`similarity(name, ${filter}) > 0.3`,
-      ]),
-    )
-    // Proper order by syntax for raw expressions
-    .orderBy(sql`similarity(name, ${filter})`, "desc")
-    .limit(20);
+  const lowerFilter = filter.toLocaleLowerCase();
+  const data = await db.selectFrom("brand").selectAll().execute();
 
-  const data = await query.execute();
-  return data.map(({ id, name }) => ({ value: id.toString(), label: name }));
+  return data
+    .filter(({ name }) => name.toLocaleLowerCase().startsWith(lowerFilter))
+    .slice(0, 20)
+    .map(({ id, name }) => ({
+      value: id.toString(), // Convert ID to string if needed
+      label: name,
+    }));
 }

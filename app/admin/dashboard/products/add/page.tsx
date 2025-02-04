@@ -1,6 +1,6 @@
 import HeaderAdmin from "@/components/admin-header";
 import ProductForm from "./form";
-import { fetchDropdownData } from "@/lib/admin/data";
+import { fetchDropdownData, getCategories } from "@/lib/admin/data";
 import { Suspense } from "react";
 //import { Skeleton } from "@/components/ui/skeleton";
 
@@ -12,8 +12,8 @@ export default async function AddNewProductPage() {
     { label: "محصول جدید" },
   ];
 
-  //const dropdownData = await fetchDropdownData();
-  const dropdownData = { categories: [], brands: [], manufacturers: [] };
+  const categories = await getCategories();
+  //const dropdownData = { categories: [], brands: [], manufacturers: [] };
 
   return (
     <>
@@ -22,7 +22,7 @@ export default async function AddNewProductPage() {
         <main className="p-6">
           <h1 className="text-3xl font-bold mb-6">افزودن محصول جدید</h1>
           <Suspense fallback={<p>loading...</p>}>
-            <ProductForm dropdownData={dropdownData} />
+            <ProductForm categories={categories} />
           </Suspense>
         </main>
       </div>

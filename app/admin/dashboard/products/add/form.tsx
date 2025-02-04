@@ -31,7 +31,11 @@ import { getBrands } from "@/lib/admin/data";
 import { AutoComplete } from "@/components/ui/autocomplete";
 import { useQuery } from "@tanstack/react-query";
 
-export default function ProductForm({ dropdownData }: { dropdownData: any }) {
+export default function ProductForm({
+  categories,
+}: {
+  categories: Category[];
+}) {
   const [searchValue, setSearchValue] = useState<string>("");
   const [selectedValue, setSelectedValue] = useState<string>("");
   const { data, isLoading } = useQuery({
@@ -96,9 +100,9 @@ export default function ProductForm({ dropdownData }: { dropdownData: any }) {
     }
   };
 
-  useEffect(() => {
-    form.setValue("brand_id", selectedValue ? parseInt(selectedValue) : null);
-  }, [selectedValue, form]);
+  //useEffect(() => {
+  //  form.setValue("brand_id", selectedValue ? parseInt(selectedValue) : null);
+  //}, [selectedValue, form]);
 
   return (
     <Form {...form}>
@@ -106,34 +110,40 @@ export default function ProductForm({ dropdownData }: { dropdownData: any }) {
         onSubmit={form.handleSubmit(onSubmit)}
         className="space-y-8 max-w-lg border shadow-black p-2 rounded-md"
       >
-        <div className="flex gap-4 w-full [&>*:first-child]:flex-1">
-          <AutoComplete
-            selectedValue={selectedValue}
-            onSelectedValueChange={setSelectedValue}
-            searchValue={searchValue}
-            onSearchValueChange={setSearchValue}
-            items={data ?? []}
-            isLoading={isLoading}
-            emptyMessage="No brands found."
-            placeholder="Search brands..."
-          />
-          <Link
-            className={buttonVariants({ variant: "link" })}
-            href="/admin/dashboard/products/brands"
-          >
-            برند جدید
-          </Link>
-        </div>
-        {/* //<AutoComplete
-          //  selectedValue={selectedValue}
-          //  onSelectedValueChange={setSelectedValue}
-          //  searchValue={searchValue}
-          //  onSearchValueChange={setSearchValue}
-          //  items={data ?? []}
-          //  isLoading={isLoading}
-          //  emptyMessage="No pokemon found."
-          ///>
-         //<FormField
+        <FormField
+          control={form.control}
+          name="brand_id" // The name for your form value
+          render={({ field }) => (
+            <FormItem className="w-full">
+              <FormLabel>برند محصول</FormLabel>
+              <div className="flex gap-4 w-full [&>*:first-child]:flex-1">
+                <FormControl>
+                  <AutoComplete
+                    selectedValue={field.value?.toString() || ""}
+                    onSelectedValueChange={(value) =>
+                      field.onChange(Number(value))
+                    }
+                    searchValue={searchValue}
+                    onSearchValueChange={setSearchValue}
+                    items={data ?? []}
+                    isLoading={isLoading}
+                    emptyMessage="No brands found."
+                    placeholder="Search brands..."
+                  />
+                </FormControl>
+                <Link
+                  className={buttonVariants({ variant: "link" })}
+                  href="/admin/dashboard/products/brands"
+                >
+                  برند جدید
+                </Link>
+              </div>
+              <FormDescription>برند محصول را وارد کنید</FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        {/*          //<FormField
         //  control={form.control}
         //  name="brand_id"
         //  render={({ field }) => (
@@ -278,7 +288,7 @@ export default function ProductForm({ dropdownData }: { dropdownData: any }) {
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {dropdownData.categories.map((category: Category) => (
+                  {categories.map((category: Category) => (
                     <SelectItem
                       key={category.id}
                       value={category.id.toString()}
