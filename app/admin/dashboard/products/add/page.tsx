@@ -1,6 +1,6 @@
 import HeaderAdmin from "@/components/admin-header";
 import ProductForm from "./form";
-import { fetchDropdownData, getCategories } from "@/lib/admin/data";
+import { getCategories } from "@/lib/admin/data";
 import { Suspense } from "react";
 //import { Skeleton } from "@/components/ui/skeleton";
 
@@ -13,7 +13,6 @@ export default async function AddNewProductPage() {
   ];
 
   const categories = await getCategories();
-  //const dropdownData = { categories: [], brands: [], manufacturers: [] };
 
   return (
     <>

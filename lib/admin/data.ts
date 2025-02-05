@@ -83,10 +83,7 @@ export async function fetchDropdownData() {
 }
 
 export async function getCategories() {
-  const data = await db
-    .selectFrom("category")
-    .select(["id", "name", "description", "parent_id"])
-    .execute();
+  const data = await db.selectFrom("category").selectAll().execute();
   return data;
 }
 
@@ -99,27 +96,46 @@ export async function getCategoryById(id: string) {
   return data;
 }
 
-//export async function getFilteredBrands(filter: string) {
-//  const lowerFilter = filter.toLocaleLowerCase();
-//  const data = await db.selectFrom("brand").selectAll().execute();
-//  return data
-//    .filter(({ name }) => name.toLocaleLowerCase().startsWith(lowerFilter))
-//    .slice(0, 20)
-//    .map(({ name, id }) => ({
-//      value: id,
-//      label: `${name}`,
-//    }));
-//}
-// Ensure your getFilteredBrands returns ID as value
 export async function getFilteredBrands(filter: string) {
   const lowerFilter = filter.toLocaleLowerCase();
   const data = await db.selectFrom("brand").selectAll().execute();
 
   return data
-    .filter(({ name }) => name.toLocaleLowerCase().startsWith(lowerFilter))
+    .filter(({ name }) => name.toLocaleLowerCase().includes(lowerFilter))
     .slice(0, 20)
     .map(({ id, name }) => ({
       value: id.toString(), // Convert ID to string if needed
+      label: name,
+    }));
+}
+
+export async function getFilteredManufacturers(filter: string) {
+  const lowerFilter = filter.toLocaleLowerCase();
+  const data = await db.selectFrom("manufacturer").selectAll().execute();
+
+  return data
+    .filter(({ name }) => name.toLocaleLowerCase().includes(lowerFilter))
+    .slice(0, 20)
+    .map(({ id, name }) => ({
+      value: id.toString(),
+      label: name,
+    }));
+}
+
+export async function getDiscounts() {
+  const data = await db.selectFrom("discount").selectAll().execute();
+  return data;
+}
+
+export async function getFilteredWarranties(filter: string) {
+  const lowerFilter = filter.toLocaleLowerCase();
+  const data = await db.selectFrom("warranty").selectAll().execute();
+
+  return data
+    .filter(({ name }) => name.toLocaleLowerCase().includes(lowerFilter))
+    .slice(0, 20)
+    .map(({ id, name }) => ({
+      value: id.toString(),
       label: name,
     }));
 }

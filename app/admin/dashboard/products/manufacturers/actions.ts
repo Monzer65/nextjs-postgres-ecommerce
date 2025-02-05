@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/db/db";
-import { brandSchema } from "@/types/zod-schemas/brands";
+import { manufacturerSchema } from "@/types/zod-schemas/manufacturers";
 import { revalidatePath } from "next/cache";
 
 type FormState = {
@@ -12,14 +12,14 @@ type FormState = {
   data?: any;
 };
 
-export async function createNewBrand(
+export async function createNewManufacturer(
   _prevstate: FormState,
   formData: FormData,
 ): Promise<FormState> {
   const name = formData.get("name");
   const description = formData.get("description");
 
-  const parsedData = brandSchema.safeParse({ name, description });
+  const parsedData = manufacturerSchema.safeParse({ name, description });
 
   if (!parsedData.success) {
     return {
@@ -37,20 +37,20 @@ export async function createNewBrand(
   const sanitizedDescription = parsedData.data.description?.trim() || null;
 
   try {
-    // Check for an existing brand with the sanitized name
-    const existingBrand = await db
-      .selectFrom("brand")
+    // Check for an existing manufacturer with the sanitized name
+    const existingManufacturer = await db
+      .selectFrom("manufacturer")
       .select("name")
       .where("name", "=", sanitizedName) // Case-insensitive check
       .executeTakeFirst();
 
-    if (existingBrand) {
-      return { message: "این برند قبلا ذخیره شده است", success: false };
+    if (existingManufacturer) {
+      return { message: "این  تولیدکننده قبلا ذخیره شده است", success: false };
     }
 
     // Insert sanitized values
     const result = await db
-      .insertInto("brand")
+      .insertInto("manufacturer")
       .values({
         name: sanitizedName,
         description: sanitizedDescription,
@@ -61,14 +61,14 @@ export async function createNewBrand(
       .execute();
     revalidatePath("/admin/dashboard/products/add");
     return {
-      message: "برند با موفقیت ذخیره شد",
+      message: "تولیدکننده با موفقیت ذخیره شد",
       success: true,
       data: result[0],
     };
   } catch (error) {
     console.error("Database Error:", error);
     return {
-      message: "خطای دیتابیس. برند در دیتابیس ذخیره نشد",
+      message: "خطای دیتابیس.  تولیدکننده در دیتابیس ذخیره نشد",
       success: false,
       issues: [error instanceof Error ? error.message : "Unknown error"],
     };

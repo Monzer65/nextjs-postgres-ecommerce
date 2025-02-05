@@ -1,5 +1,8 @@
 "use client";
-import { brandSchema, BrandSchemaType } from "@/types/zod-schemas/brands";
+import {
+  manufacturerSchema,
+  ManufacturerSchemaType,
+} from "@/types/zod-schemas/manufacturers";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
@@ -17,24 +20,24 @@ import { Textarea } from "@/components/ui/textarea";
 import { Loader, Save } from "lucide-react";
 import { startTransition, useActionState } from "react";
 
-import { createNewBrand } from "./actions";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { createNewManufacturer } from "./actions";
 
-export function BrandForm() {
-  const form = useForm<BrandSchemaType>({
-    resolver: zodResolver(brandSchema),
+export function ManufacturerForm() {
+  const form = useForm<ManufacturerSchemaType>({
+    resolver: zodResolver(manufacturerSchema),
     defaultValues: {
       name: "",
       description: "",
     },
   });
 
-  const [state, formAction, isPending] = useActionState(createNewBrand, {
+  const [state, formAction, isPending] = useActionState(createNewManufacturer, {
     message: "",
     success: false,
   });
 
-  const onSubmit = (data: BrandSchemaType) => {
+  const onSubmit = (data: ManufacturerSchemaType) => {
     console.log(data);
     const formData = new FormData();
     formData.append("name", data.name);
@@ -45,9 +48,14 @@ export function BrandForm() {
       formAction(formData);
     });
   };
+
   return (
     <Form {...form}>
-      <form action={formAction} onSubmit={form.handleSubmit(onSubmit)}>
+      <form
+        action={formAction}
+        onSubmit={form.handleSubmit(onSubmit)}
+        className="grid space-y-4"
+      >
         {state.message && (
           <Alert variant={state.success ? "default" : "destructive"}>
             <AlertTitle>{state.success ? "موفق" : "خطا"}</AlertTitle>
@@ -64,11 +72,11 @@ export function BrandForm() {
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>*نام برند</FormLabel>
+              <FormLabel>*نام تولیدکننده</FormLabel>
               <FormControl>
                 <Input placeholder="" {...field} />
               </FormControl>
-              <FormDescription>نام برند را وارد کنید</FormDescription>
+              <FormDescription>نام تولیدکننده را وارد کنید</FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -88,7 +96,7 @@ export function BrandForm() {
                 />
               </FormControl>
               <FormDescription>
-                توضیحات درباره برند را وارد کنید
+                توضیحات درباره تولیدکننده را وارد کنید
               </FormDescription>
               <FormMessage />
             </FormItem>

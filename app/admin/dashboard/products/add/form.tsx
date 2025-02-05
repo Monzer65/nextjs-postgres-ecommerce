@@ -22,12 +22,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Brand, Category } from "@/db/schema";
+import { Category } from "@/db/schema";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { useActionState, useEffect, useState } from "react";
 import Link from "next/link";
-import { getBrands } from "@/lib/admin/data";
 import { AutoComplete } from "@/components/ui/autocomplete";
 import { useQuery } from "@tanstack/react-query";
 
@@ -36,29 +34,50 @@ export default function ProductForm({
 }: {
   categories: Category[];
 }) {
-  const [searchValue, setSearchValue] = useState<string>("");
-  const [selectedValue, setSelectedValue] = useState<string>("");
-  const { data, isLoading } = useQuery({
-    queryKey: ["brandsData", searchValue],
+  // State for search values
+  const [brandSearchValue, setBrandSearchValue] = useState<string>("");
+  const [manufacturerSearchValue, setManufacturerSearchValue] =
+    useState<string>("");
+  //const [discountSearchValue, setDiscountSearchValue] = useState<string>("");
+  const [warrantySearchValue, setWarrantySearchValue] = useState<string>("");
+
+  // Queries for fetching data
+  const { data: brandsData, isLoading: isBrandsLoading } = useQuery({
+    queryKey: ["brandsData", brandSearchValue],
     queryFn: async () => {
-      const response = await fetch(`/api/brands?filter=${searchValue}`);
+      const response = await fetch(`/api/brands?filter=${brandSearchValue}`);
       return response.json();
     },
   });
 
-  useEffect(() => {
-    if (selectedValue) {
-      console.log("Selected brand ID:", selectedValue);
+  const { data: manufacturersData, isLoading: isManufacturersLoading } =
+    useQuery({
+      queryKey: ["manufacturersData", manufacturerSearchValue],
+      queryFn: async () => {
+        const response = await fetch(
+          `/api/manufacturers?filter=${manufacturerSearchValue}`,
+        );
+        return response.json();
+      },
+    });
 
-      // Optional: Find the full brand object if you have access to the data
-      const selectedBrand = data?.find(
-        (brand: Brand) => brand.name === selectedValue,
+  //const { data: discountsData, isLoading: isDiscountsLoading } = useQuery({
+  //  queryKey: ["discountsData", discountSearchValue],
+  //  queryFn: async () => {
+  //    const response = await fetch(`/api/discounts?filter=${discountSearchValue}`);
+  //    return response.json();
+  //  },
+  //});
+
+  const { data: warrantiesData, isLoading: isWarrantiesLoading } = useQuery({
+    queryKey: ["warrantiesData", warrantySearchValue],
+    queryFn: async () => {
+      const response = await fetch(
+        `/api/warranties?filter=${warrantySearchValue}`,
       );
-      if (selectedBrand) {
-        console.log("Full brand details:", selectedBrand);
-      }
-    }
-  }, [selectedValue, data]);
+      return response.json();
+    },
+  });
 
   const form = useForm<ProductSchemaType>({
     resolver: zodResolver(productSchema),
@@ -100,19 +119,16 @@ export default function ProductForm({
     }
   };
 
-  //useEffect(() => {
-  //  form.setValue("brand_id", selectedValue ? parseInt(selectedValue) : null);
-  //}, [selectedValue, form]);
-
   return (
     <Form {...form}>
       <form
         onSubmit={form.handleSubmit(onSubmit)}
         className="space-y-8 max-w-lg border shadow-black p-2 rounded-md"
       >
+        {/* Brand Field */}
         <FormField
           control={form.control}
-          name="brand_id" // The name for your form value
+          name="brand_id"
           render={({ field }) => (
             <FormItem className="w-full">
               <FormLabel>برند محصول</FormLabel>
@@ -121,12 +137,12 @@ export default function ProductForm({
                   <AutoComplete
                     selectedValue={field.value?.toString() || ""}
                     onSelectedValueChange={(value) =>
-                      field.onChange(Number(value))
+                      field.onChange(parseInt(value))
                     }
-                    searchValue={searchValue}
-                    onSearchValueChange={setSearchValue}
-                    items={data ?? []}
-                    isLoading={isLoading}
+                    searchValue={brandSearchValue}
+                    onSearchValueChange={setBrandSearchValue}
+                    items={brandsData ?? []}
+                    isLoading={isBrandsLoading}
                     emptyMessage="No brands found."
                     placeholder="Search brands..."
                   />
@@ -143,42 +159,110 @@ export default function ProductForm({
             </FormItem>
           )}
         />
-        {/*          //<FormField
-        //  control={form.control}
-        //  name="brand_id"
-        //  render={({ field }) => (
-        //    <FormItem>
-        //      <FormLabel>Brand</FormLabel>
-        //      <div className="flex gap-2">
-        //        <Select
-        //          onValueChange={field.onChange}
-        //          value={field.value?.toString()}
-        //        >
-        //          <FormControl>
-        //            <SelectTrigger>
-        //              <SelectValue placeholder="Select a brand" />
-        //            </SelectTrigger>
-        //          </FormControl>
-        //          <SelectContent>
-        //            {brandList.map((brand: Brand) => (
-        //              <SelectItem key={brand.id} value={String(brand.id)}>
-        //                {brand.name}
-        //              </SelectItem>
-        //            ))}
-        //          </SelectContent>
-        //        </Select>
-        //        <Link
-        //          className={buttonVariants({ variant: "link" })}
-        //          href="/admin/dashboard/products/brands"
-        //        >
-        //          برند جدید
-        //        </Link>
-        //      </div>
-        //      <FormMessage />
-        //    </FormItem>
-        //  )}
-        ///>
-        //*/}
+
+        {/* Manufacturer Field */}
+        <FormField
+          control={form.control}
+          name="manufacturer_id"
+          render={({ field }) => (
+            <FormItem className="w-full">
+              <FormLabel>تولید کننده</FormLabel>
+              <div className="flex gap-4 w-full [&>*:first-child]:flex-1">
+                <FormControl>
+                  <AutoComplete
+                    selectedValue={field.value?.toString() || ""}
+                    onSelectedValueChange={(value) =>
+                      field.onChange(parseInt(value))
+                    }
+                    searchValue={manufacturerSearchValue}
+                    onSearchValueChange={setManufacturerSearchValue}
+                    items={manufacturersData ?? []}
+                    isLoading={isManufacturersLoading}
+                    emptyMessage="No manufacturers found."
+                    placeholder="Search manufacturers..."
+                  />
+                </FormControl>
+                <Link
+                  className={buttonVariants({ variant: "link" })}
+                  href="/admin/dashboard/products/manufacturers"
+                >
+                  تولید کننده جدید
+                </Link>
+              </div>
+              <FormDescription>تولید کننده را وارد کنید</FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* Discount Field */}
+        {/* <FormField 
+        //   control={form.control}
+        //   name="discount_id"
+        //   render={({ field }) => (
+        //     <FormItem className="w-full">
+        //       <FormLabel>تخفیف</FormLabel>
+        //       <div className="flex gap-4 w-full [&>*:first-child]:flex-1">
+        //         <FormControl>
+        //           <AutoComplete
+        //             selectedValue={field.value?.toString() || ""}
+        //             onSelectedValueChange={(value) => field.onChange(parseInt(value))}
+        //             searchValue={discountSearchValue}
+        //             onSearchValueChange={setDiscountSearchValue}
+        //             items={discountsData ?? []}
+        //             isLoading={isDiscountsLoading}
+        //             emptyMessage="No discounts found."
+        //             placeholder="Search discounts..."
+        //           />
+        //         </FormControl>
+        //         <Link
+        //           className={buttonVariants({ variant: "link" })}
+        //           href="/admin/dashboard/products/discounts"
+        //         >
+        //           تخفیف جدید
+        //         </Link>
+        //       </div>
+        //       <FormDescription>تخفیف را وارد کنید</FormDescription>
+        //       <FormMessage />
+        //     </FormItem>
+        //   )}
+        // />
+*/}
+        {/* Warranty Field */}
+        <FormField
+          control={form.control}
+          name="warranty_id"
+          render={({ field }) => (
+            <FormItem className="w-full">
+              <FormLabel>گارانتی</FormLabel>
+              <div className="flex gap-4 w-full [&>*:first-child]:flex-1">
+                <FormControl>
+                  <AutoComplete
+                    selectedValue={field.value?.toString() || ""}
+                    onSelectedValueChange={(value) =>
+                      field.onChange(parseInt(value))
+                    }
+                    searchValue={warrantySearchValue}
+                    onSearchValueChange={setWarrantySearchValue}
+                    items={warrantiesData ?? []}
+                    isLoading={isWarrantiesLoading}
+                    emptyMessage="No warranties found."
+                    placeholder="Search warranties..."
+                  />
+                </FormControl>
+                <Link
+                  className={buttonVariants({ variant: "link" })}
+                  href="/admin/dashboard/products/warranties"
+                >
+                  گارانتی جدید
+                </Link>
+              </div>
+              <FormDescription>گارانتی را وارد کنید</FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
         <FormField
           control={form.control}
           name="name"
@@ -441,3 +525,245 @@ export default function ProductForm({
     </Form>
   );
 }
+
+//
+//import { useState } from "react";
+//import { useQuery } from "@tanstack/react-query";
+//
+//export default function ProductForm({ categories }: { categories: Category[] }) {
+//  // State for search values
+//  const [brandSearchValue, setBrandSearchValue] = useState<string>("");
+//  const [manufacturerSearchValue, setManufacturerSearchValue] = useState<string>("");
+//  const [discountSearchValue, setDiscountSearchValue] = useState<string>("");
+//  const [warrantySearchValue, setWarrantySearchValue] = useState<string>("");
+//
+//  // Queries for fetching data
+//  const { data: brandsData, isLoading: isBrandsLoading } = useQuery({
+//    queryKey: ["brandsData", brandSearchValue],
+//    queryFn: async () => {
+//      const response = await fetch(`/api/brands?filter=${brandSearchValue}`);
+//      return response.json();
+//    },
+//  });
+//
+//  const { data: manufacturersData, isLoading: isManufacturersLoading } = useQuery({
+//    queryKey: ["manufacturersData", manufacturerSearchValue],
+//    queryFn: async () => {
+//      const response = await fetch(`/api/manufacturers?filter=${manufacturerSearchValue}`);
+//      return response.json();
+//    },
+//  });
+//
+//  const { data: discountsData, isLoading: isDiscountsLoading } = useQuery({
+//    queryKey: ["discountsData", discountSearchValue],
+//    queryFn: async () => {
+//      const response = await fetch(`/api/discounts?filter=${discountSearchValue}`);
+//      return response.json();
+//    },
+//  });
+//
+//  const { data: warrantiesData, isLoading: isWarrantiesLoading } = useQuery({
+//    queryKey: ["warrantiesData", warrantySearchValue],
+//    queryFn: async () => {
+//      const response = await fetch(`/api/warranties?filter=${warrantySearchValue}`);
+//      return response.json();
+//    },
+//  });
+//
+//  const form = useForm<ProductSchemaType>({
+//    resolver: zodResolver(productSchema),
+//    defaultValues: {
+//      name: "",
+//      description: "",
+//      price: 0,
+//      SKU: "",
+//      stock: 0,
+//      category_id: undefined,
+//      min_order_quantity: null,
+//      max_order_quantity: null,
+//      weight: null,
+//      length: null,
+//      width: null,
+//      height: null,
+//      brand_id: null,
+//      newBrand: "",
+//      manufacturer_id: null,
+//      discount_id: null,
+//      warranty_id: null,
+//    },
+//  });
+//
+//  const onSubmit = async (data: ProductSchemaType) => {
+//    try {
+//      console.log(data);
+//      toast(
+//        <pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4">
+//          <code className="text-white">{JSON.stringify(data, null, 2)}</code>
+//        </pre>,
+//      );
+//    } catch (error) {
+//      console.error("Form submission error", error);
+//      toast.error("Failed to submit the form. Please try again.");
+//    }
+//  };
+//
+//  return (
+//    <Form {...form}>
+//      <form
+//        onSubmit={form.handleSubmit(onSubmit)}
+//        className="space-y-8 max-w-lg border shadow-black p-2 rounded-md"
+//      >
+//        {/* Brand Field */}
+//        <FormField
+//          control={form.control}
+//          name="brand_id"
+//          render={({ field }) => (
+//            <FormItem className="w-full">
+//              <FormLabel>برند محصول</FormLabel>
+//              <div className="flex gap-4 w-full [&>*:first-child]:flex-1">
+//                <FormControl>
+//                  <AutoComplete
+//                    selectedValue={field.value?.toString() || ""}
+//                    onSelectedValueChange={(value) => field.onChange(parseInt(value))}
+//                    searchValue={brandSearchValue}
+//                    onSearchValueChange={setBrandSearchValue}
+//                    items={brandsData ?? []}
+//                    isLoading={isBrandsLoading}
+//                    emptyMessage="No brands found."
+//                    placeholder="Search brands..."
+//                  />
+//                </FormControl>
+//                <Link
+//                  className={buttonVariants({ variant: "link" })}
+//                  href="/admin/dashboard/products/brands"
+//                >
+//                  برند جدید
+//                </Link>
+//              </div>
+//              <FormDescription>برند محصول را وارد کنید</FormDescription>
+//              <FormMessage />
+//            </FormItem>
+//          )}
+//        />
+//
+//        {/* Manufacturer Field */}
+//        <FormField
+//          control={form.control}
+//          name="manufacturer_id"
+//          render={({ field }) => (
+//            <FormItem className="w-full">
+//              <FormLabel>تولید کننده</FormLabel>
+//              <div className="flex gap-4 w-full [&>*:first-child]:flex-1">
+//                <FormControl>
+//                  <AutoComplete
+//                    selectedValue={field.value?.toString() || ""}
+//                    onSelectedValueChange={(value) => field.onChange(parseInt(value))}
+//                    searchValue={manufacturerSearchValue}
+//                    onSearchValueChange={setManufacturerSearchValue}
+//                    items={manufacturersData ?? []}
+//                    isLoading={isManufacturersLoading}
+//                    emptyMessage="No manufacturers found."
+//                    placeholder="Search manufacturers..."
+//                  />
+//                </FormControl>
+//                <Link
+//                  className={buttonVariants({ variant: "link" })}
+//                  href="/admin/dashboard/products/manufacturers"
+//                >
+//                  تولید کننده جدید
+//                </Link>
+//              </div>
+//              <FormDescription>تولید کننده را وارد کنید</FormDescription>
+//              <FormMessage />
+//            </FormItem>
+//          )}
+//        />
+//
+//        {/* Discount Field */}
+//        <FormField
+//          control={form.control}
+//          name="discount_id"
+//          render={({ field }) => (
+//            <FormItem className="w-full">
+//              <FormLabel>تخفیف</FormLabel>
+//              <div className="flex gap-4 w-full [&>*:first-child]:flex-1">
+//                <FormControl>
+//                  <AutoComplete
+//                    selectedValue={field.value?.toString() || ""}
+//                    onSelectedValueChange={(value) => field.onChange(parseInt(value))}
+//                    searchValue={discountSearchValue}
+//                    onSearchValueChange={setDiscountSearchValue}
+//                    items={discountsData ?? []}
+//                    isLoading={isDiscountsLoading}
+//                    emptyMessage="No discounts found."
+//                    placeholder="Search discounts..."
+//                  />
+//                </FormControl>
+//                <Link
+//                  className={buttonVariants({ variant: "link" })}
+//                  href="/admin/dashboard/products/discounts"
+//                >
+//                  تخفیف جدید
+//                </Link>
+//              </div>
+//              <FormDescription>تخفیف را وارد کنید</FormDescription>
+//              <FormMessage />
+//            </FormItem>
+//          )}
+//        />
+//
+//        {/* Warranty Field */}
+//        <FormField
+//          control={form.control}
+//          name="warranty_id"
+//          render={({ field }) => (
+//            <FormItem className="w-full">
+//              <FormLabel>گارانتی</FormLabel>
+//              <div className="flex gap-4 w-full [&>*:first-child]:flex-1">
+//                <FormControl>
+//                  <AutoComplete
+//                    selectedValue={field.value?.toString() || ""}
+//                    onSelectedValueChange={(value) => field.onChange(parseInt(value))}
+//                    searchValue={warrantySearchValue}
+//                    onSearchValueChange={setWarrantySearchValue}
+//                    items={warrantiesData ?? []}
+//                    isLoading={isWarrantiesLoading}
+//                    emptyMessage="No warranties found."
+//                    placeholder="Search warranties..."
+//                  />
+//                </FormControl>
+//                <Link
+//                  className={buttonVariants({ variant: "link" })}
+//                  href="/admin/dashboard/products/warranties"
+//                >
+//                  گارانتی جدید
+//                </Link>
+//              </div>
+//              <FormDescription>گارانتی را وارد کنید</FormDescription>
+//              <FormMessage />
+//            </FormItem>
+//          )}
+//        />
+//
+//        {/* Name Field */}
+//        <FormField
+//          control={form.control}
+//          name="name"
+//          render={({ field }) => (
+//            <FormItem>
+//              <FormLabel>*نام محصول</FormLabel>
+//              <FormControl>
+//                <Input placeholder="" {...field} />
+//              </FormControl>
+//              <FormDescription>نام محصول را وارد کنید</FormDescription>
+//              <FormMessage />
+//            </FormItem>
+//          )}
+//        />
+//
+//        {/* Rest of the form fields */}
+//        ...
+//      </form>
+//    </Form>
+//  );
+//}
