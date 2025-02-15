@@ -47,7 +47,11 @@ export function BrandForm() {
   };
   return (
     <Form {...form}>
-      <form action={formAction} onSubmit={form.handleSubmit(onSubmit)}>
+      <form
+        action={formAction}
+        onSubmit={form.handleSubmit(onSubmit)}
+        className="grid space-y-4"
+      >
         {state.message && (
           <Alert variant={state.success ? "default" : "destructive"}>
             <AlertTitle>{state.success ? "موفق" : "خطا"}</AlertTitle>

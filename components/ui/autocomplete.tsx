@@ -101,7 +101,7 @@ export function AutoComplete<T extends string>({
               onFocus={() => setOpen(true)}
               //onBlur={onInputBlur}
             >
-              <Input placeholder={placeholder} />
+              <Input placeholder={placeholder} className="pr-10" />
             </CommandPrimitive.Input>
           </PopoverAnchor>
           {!open && <CommandList aria-hidden="true" className="hidden" />}

@@ -1,6 +1,14 @@
 import { z } from "zod";
 
-// Define a Zod schema for the Product type
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const ACCEPTED_IMAGE_TYPES = [
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/webp",
+  "image/svg+xml",
+];
+
 export const productSchema = z.object({
   id: z.number().optional(), // Optional for new products
   name: z.string().min(1, "نام محصول ضروری است"),
@@ -25,7 +33,27 @@ export const productSchema = z.object({
   created_at: z.date().optional(), // Optional for new products
   updated_at: z.date().optional(), // Optional for new products
   deleted_at: z.date().nullable().optional(), // Optional for new products
+  images: z
+    .array(
+      z
+        .instanceof(File)
+        .refine(
+          (file) => file.size <= MAX_FILE_SIZE,
+          `حجم فایل باید کمتر از 5MB باشد.`,
+        )
+        .refine(
+          (file) => ACCEPTED_IMAGE_TYPES.includes(file.type),
+          "فقط فرمت‌های .jpg, .jpeg, .png, .webp و .svg پذیرفته می‌شوند.",
+        ),
+    )
+    .refine(
+      (files) => files?.length > 0,
+      "حداقل یک تصویر برای محصول الزامی است.",
+    )
+    .refine(
+      (files) => files?.length <= 5,
+      "حداکثر 5 تصویر می‌توانید آپلود کنید.",
+    ),
 });
 
-// Infer the type from the Zod schema
-export type ProductSchemaType = z.infer<typeof productSchema>;
+export type ProductFormData = z.infer<typeof productSchema>;
