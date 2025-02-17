@@ -24,12 +24,15 @@ import {
 import { toast } from "sonner";
 import { Category, Discount } from "@/db/schema";
 import { Textarea } from "@/components/ui/textarea";
-import { useActionState, useCallback, useEffect, useState } from "react";
+import { useActionState, useState } from "react";
 import Link from "next/link";
 import { AutoComplete } from "@/components/ui/autocomplete";
 import { useQuery } from "@tanstack/react-query";
-import { X } from "lucide-react";
+import { UploadCloud, X } from "lucide-react";
 import Image from "next/image";
+import { createNewProduct } from "./actions";
+
+import SampleImage from "./sample-image";
 
 export default function ProductForm({
   categories,
@@ -77,26 +80,23 @@ export default function ProductForm({
   const form = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
     defaultValues: {
-      name: "", // required
-      description: "", // required
-      price: 0, // required
-      SKU: "", // required
-      stock: 0, // required
-      category_id: undefined, // required
-      min_order_quantity: null,
-      max_order_quantity: null,
-      weight: null,
-      length: null,
-      width: null,
-      height: null,
-      brand_id: null,
-      manufacturer_id: null,
-      discount_id: null,
-      warranty_id: null,
-      //created_at: undefined,
-      //updated_at: undefined,
-      //deleted_at: null,
-      images: [],
+      name: "", // string
+      description: "", // string
+      price: 0, // number
+      SKU: "", // string
+      stock: 0, // number
+      category_id: undefined, // number (required by schema)
+      min_order_quantity: null, // number | null
+      max_order_quantity: null, // number | null
+      weight: null, // number | null
+      length: null, // number | null
+      width: null, // number | null
+      height: null, // number | null
+      brand_id: null, // number | null
+      manufacturer_id: null, // number | null
+      discount_id: null, // number | null
+      warranty_id: null, // number | null
+      images: [], // File[]
     },
   });
 
@@ -112,9 +112,15 @@ export default function ProductForm({
       toast.error("Failed to submit the form. Please try again.");
     }
   };
+  const [state, formAction, isPending] = useActionState(createNewProduct, {
+    message: "",
+    success: false,
+  });
 
   return (
     <Form {...form}>
+      <SampleImage />
+
       <form
         onSubmit={form.handleSubmit(onSubmit)}
         className="space-y-8 max-w-lg border shadow-black p-2 rounded-md"
@@ -180,7 +186,6 @@ export default function ProductForm({
             </FormItem>
           )}
         />
-
         {/* Manufacturer Field */}
         <FormField
           control={form.control}
@@ -291,9 +296,7 @@ export default function ProductForm({
 
             return (
               <FormItem>
-                <FormLabel className="text-lg font-semibold">
-                  تصاویر محصول
-                </FormLabel>
+                <FormLabel>*تصاویر محصول</FormLabel>
                 <FormControl>
                   <div
                     className="flex items-center justify-center w-full"
@@ -305,21 +308,7 @@ export default function ProductForm({
                       className="flex flex-col items-center justify-center w-full h-64 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:hover:bg-bray-800 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-600"
                     >
                       <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                        <svg
-                          className="w-8 h-8 mb-4 text-gray-500 dark:text-gray-400"
-                          aria-hidden="true"
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 20 16"
-                        >
-                          <path
-                            stroke="currentColor"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="2"
-                            d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"
-                          />
-                        </svg>
+                        <UploadCloud className="w-8 h-8 mb-4 text-gray-500 dark:text-gray-400" />
                         <p className="mb-2 text-sm text-gray-500 dark:text-gray-400">
                           <span className="font-semibold">
                             برای افزودن تصویر کلیک کنید
@@ -378,7 +367,26 @@ export default function ProductForm({
             );
           }}
         />
-
+        <FormField
+          control={form.control}
+          name="price"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>*قیمت (تومان)</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  placeholder=""
+                  {...field}
+                  value={field.value || ""}
+                  onChange={(e) => field.onChange(e.target.valueAsNumber)}
+                />
+              </FormControl>
+              <FormDescription>قیمت محصول را وارد کنید</FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />{" "}
         <FormField
           control={form.control}
           name="discount_id"
@@ -410,27 +418,6 @@ export default function ProductForm({
             </FormItem>
           )}
         />
-
-        <FormField
-          control={form.control}
-          name="price"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>*قیمت (تومان)</FormLabel>
-              <FormControl>
-                <Input
-                  type="number"
-                  placeholder=""
-                  {...field}
-                  value={field.value || ""}
-                  onChange={(e) => field.onChange(e.target.valueAsNumber)}
-                />
-              </FormControl>
-              <FormDescription>قیمت محصول را وارد کنید</FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
         <FormField
           control={form.control}
           name="description"
@@ -447,7 +434,6 @@ export default function ProductForm({
             </FormItem>
           )}
         />
-
         <div className="sm:flex flex-wrap justify-between gap-4 [&>*]:flex-1">
           <FormField
             control={form.control}
@@ -537,7 +523,6 @@ export default function ProductForm({
             )}
           />
         </div>
-
         <div className="sm:flex flex-wrap items-center justify-between gap-4 [&>*]:flex-1">
           <FormField
             control={form.control}
@@ -669,7 +654,6 @@ export default function ProductForm({
             </FormItem>
           )}
         />
-
         <Button type="submit">Submit</Button>
       </form>
     </Form>

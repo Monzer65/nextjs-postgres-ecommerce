@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/db/db";
-import { brandSchema, productSchema } from "@/types/zod-schemas/products";
+import { productSchema } from "@/types/zod-schemas/products";
 
 type FormState = {
   message?: string;
@@ -53,8 +53,9 @@ export async function createNewProduct(
     category_id,
     discount_id,
     warranty_id,
+    images,
   } = parsedData.data;
-
+  return { message: "successfull" };
   //try {
   //  await db
   //    .insertInto("product")
@@ -87,8 +88,8 @@ export async function createNewProduct(
   //  };
   //}
   //
-  revalidatePath("/admin/dashboard/products");
-  redirect("/admin/dashboard/products");
+  //revalidatePath("/admin/dashboard/products");
+  //redirect("/admin/dashboard/products");
 }
 
 // export type State = {

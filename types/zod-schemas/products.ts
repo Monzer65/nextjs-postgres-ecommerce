@@ -27,7 +27,11 @@ export const productSchema = z.object({
   height: z.number().nonnegative().nullable(),
   brand_id: z.number().int().nonnegative().nullable(),
   manufacturer_id: z.number().int().nonnegative().nullable(),
-  category_id: z.number().int().nonnegative("دسته بندی محصول را انتخاب کنید"),
+  category_id: z
+    .number({ message: "دسته بندی محصول را انتخاب کنید" })
+    .int()
+    .nonnegative("دسته بندی محصول انتخاب شده نباید منفی باشد"),
+
   discount_id: z.number().int().nonnegative().nullable(),
   warranty_id: z.number().int().nonnegative().nullable(),
   created_at: z.date().optional(), // Optional for new products
