@@ -42,6 +42,7 @@ body {
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
+
   .dark {
     --background: 240 10% 3.9%;
     --foreground: 0 0% 98%;
@@ -82,7 +83,29 @@ body {
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Override default text for Cloudinary widget */
+#cloudinary-widget .panel.local .drag_area .drag_content .label.label_single:after {
+  content: "فایل را اینجا بکشید";
+}
+
+#cloudinary-widget .panel.local .drag_area .drag_content .label.label_multiple:after {
+  content: "فایل‌ها را اینجا بکشید";
+}
+
+#cloudinary-widget .button.select_file.select_single:after {
+  content: "انتخاب فایل";
+}
+
+#cloudinary-widget .button.select_file.select_multiple:after {
+  content: "انتخاب چند فایل";
+}
+
+#cloudinary-widget .button.capture_camera:after {
+  content: "تصویربرداری از دوربین";
 }

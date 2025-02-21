@@ -24,15 +24,14 @@ import {
 import { toast } from "sonner";
 import { Category, Discount } from "@/db/schema";
 import { Textarea } from "@/components/ui/textarea";
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import Link from "next/link";
 import { AutoComplete } from "@/components/ui/autocomplete";
 import { useQuery } from "@tanstack/react-query";
 import { UploadCloud, X } from "lucide-react";
 import Image from "next/image";
 import { createNewProduct } from "./actions";
-
-import SampleImage from "./sample-image";
+import ImageUpload from "./image-upload";
 
 export default function ProductForm({
   categories,
@@ -41,6 +40,27 @@ export default function ProductForm({
   categories: Category[];
   discounts: Discount[];
 }) {
+  const [uploadedImages, setUploadedImages] = useState<
+    { public_id: string; secure_url: string }[]
+  >([]);
+  // Callback function to handle uploaded image info
+  const handleUploadSuccess = (fileInfo: {
+    public_id: string;
+    secure_url: string;
+  }) => {
+    setUploadedImages((prev) => [...prev, fileInfo]);
+  };
+
+  // Callback function to handle file removal
+  const handleRemoveFile = (publicId: string) => {
+    setUploadedImages((prev) =>
+      prev.filter((file) => file.public_id !== publicId),
+    );
+  };
+
+  useEffect(() => {
+    console.log("Updated images:", uploadedImages);
+  }, [uploadedImages]);
   // State for search values
   const [brandSearchValue, setBrandSearchValue] = useState<string>("");
   const [manufacturerSearchValue, setManufacturerSearchValue] =
@@ -96,7 +116,7 @@ export default function ProductForm({
       manufacturer_id: null, // number | null
       discount_id: null, // number | null
       warranty_id: null, // number | null
-      images: [], // File[]
+      images: [], //image urls from uploaded files in the widget
     },
   });
 
@@ -119,8 +139,10 @@ export default function ProductForm({
 
   return (
     <Form {...form}>
-      <SampleImage />
-
+      <ImageUpload
+        onUploadSuccess={handleUploadSuccess}
+        onRemoveFile={handleRemoveFile}
+      />
       <form
         onSubmit={form.handleSubmit(onSubmit)}
         className="space-y-8 max-w-lg border shadow-black p-2 rounded-md"
