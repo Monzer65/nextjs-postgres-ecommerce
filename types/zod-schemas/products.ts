@@ -37,27 +37,10 @@ export const productSchema = z.object({
   created_at: z.date().optional(), // Optional for new products
   updated_at: z.date().optional(), // Optional for new products
   deleted_at: z.date().nullable().optional(), // Optional for new products
+
   images: z
-    .array(
-      z
-        .instanceof(File)
-        .refine(
-          (file) => file.size <= MAX_FILE_SIZE,
-          `حجم فایل باید کمتر از 5MB باشد.`,
-        )
-        .refine(
-          (file) => ACCEPTED_IMAGE_TYPES.includes(file.type),
-          "فقط فرمت‌های .jpg, .jpeg, .png, .webp و .svg پذیرفته می‌شوند.",
-        ),
-    )
-    .refine(
-      (files) => files?.length > 0,
-      "حداقل یک تصویر برای محصول الزامی است.",
-    )
-    .refine(
-      (files) => files?.length <= 5,
-      "حداکثر 5 تصویر می‌توانید آپلود کنید.",
-    ),
+    .array(z.string().url("آدرس تصویر معتبر نیست"))
+    .min(1, "حداقل یک تصویر الزامی است"),
 });
 
 export type ProductFormData = z.infer<typeof productSchema>;

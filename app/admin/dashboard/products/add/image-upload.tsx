@@ -1,54 +1,27 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { CldUploadWidget, CldImage } from "next-cloudinary";
+import { useState } from "react";
+import { CldUploadWidget } from "next-cloudinary";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Upload, X } from "lucide-react";
+import { Upload } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-
-interface UploadedFile {
-  public_id: string;
-  secure_url: string;
-}
+import { UploadedImages } from "./form";
 
 interface ImageUploadProps {
-  onUploadSuccess?: (fileInfo: UploadedFile) => void; // Callback for successful upload
-  onRemoveFile?: (publicId: string) => void; // Callback for file removal
+  onUploadSuccess?: (fileInfo: UploadedImages) => void; // Callback for successful upload
 }
 
-export default function ImageUpload({
-  onUploadSuccess,
-  onRemoveFile,
-}: ImageUploadProps) {
-  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+export default function ImageUpload({ onUploadSuccess }: ImageUploadProps) {
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedImages[]>([]);
   const [isUploading, setIsUploading] = useState(false);
-
-  function removeFile(publicId: string) {
-    setUploadedFiles((prev) =>
-      prev.filter((file) => file.public_id !== publicId),
-    );
-
-    // Call the callback to notify parent about file removal
-    if (onRemoveFile) {
-      onRemoveFile(publicId);
-    }
-
-    toast({
-      title: "Image removed",
-      description: "The image has been successfully removed.",
-    });
-  }
-
-  useEffect(() => {
-    console.log("Updated uploadedFiles:", uploadedFiles);
-  }, [uploadedFiles]);
 
   return (
     <Card className="w-full max-w-lg my-4">
       <CardContent className="p-6">
         <CldUploadWidget
           uploadPreset="shopsy"
+          // Update the onSuccess handler
           onSuccess={(result) => {
             console.log("Upload Success:", result);
 
@@ -56,10 +29,27 @@ export default function ImageUpload({
               result?.info &&
               typeof result.info === "object" &&
               "public_id" in result.info &&
-              "secure_url" in result.info
+              "secure_url" in result.info &&
+              "url" in result.info &&
+              "thumbnail_url" in result.info
             ) {
-              const fileInfo = result.info as UploadedFile;
-              setUploadedFiles((prev) => [...prev, fileInfo]);
+              const fileInfo = result.info as UploadedImages;
+
+              // Check for duplicates before updating state
+              setUploadedFiles((prev) => {
+                const exists = prev.some(
+                  (file) => file.public_id === fileInfo.public_id,
+                );
+                if (exists) {
+                  toast({
+                    title: "Duplicate Image",
+                    description: "This image has already been uploaded.",
+                    variant: "destructive",
+                  });
+                  return prev;
+                }
+                return [...prev, fileInfo];
+              });
 
               // Call the callback with the uploaded file info
               if (onUploadSuccess) {
@@ -103,38 +93,11 @@ export default function ImageUpload({
                     "Uploading..."
                   ) : (
                     <>
-                      <Upload className="w-4 h-4 mr-2" />
-                      Upload Image
+                      <Upload className="w-4 h-4" />
+                      آپلود تصاویر
                     </>
                   )}
                 </Button>
-
-                {/* Preview Uploaded Images */}
-                {uploadedFiles.length > 0 && (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 w-full">
-                    {uploadedFiles.map((file) => (
-                      <div key={file.public_id} className="relative group">
-                        <CldImage
-                          src={file.secure_url}
-                          alt="Uploaded Image"
-                          width={150}
-                          height={150}
-                          className="rounded-md object-cover w-full h-full"
-                        />
-                        <Button
-                          onClick={() => removeFile(file.public_id)}
-                          className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                          size="icon"
-                          variant="destructive"
-                          aria-label="Remove image"
-                        >
-                          <X className="w-4 h-4" />
-                          <span className="sr-only">Remove image</span>
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
             );
           }}

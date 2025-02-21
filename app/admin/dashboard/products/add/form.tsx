@@ -21,18 +21,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { toast } from "sonner";
+import { toast as sonnerToast } from "sonner";
 import { Category, Discount } from "@/db/schema";
 import { Textarea } from "@/components/ui/textarea";
 import { useActionState, useEffect, useState } from "react";
 import Link from "next/link";
 import { AutoComplete } from "@/components/ui/autocomplete";
 import { useQuery } from "@tanstack/react-query";
-import { UploadCloud, X } from "lucide-react";
-import Image from "next/image";
+import { X } from "lucide-react";
 import { createNewProduct } from "./actions";
 import ImageUpload from "./image-upload";
+import { CldImage } from "next-cloudinary";
+import { toast } from "@/hooks/use-toast";
 
+export interface UploadedImages {
+  public_id: string;
+  secure_url: string;
+  url: string;
+  thumbnail_url: string;
+  bytes: number;
+  height: number;
+  width: number;
+}
 export default function ProductForm({
   categories,
   discounts,
@@ -40,15 +50,24 @@ export default function ProductForm({
   categories: Category[];
   discounts: Discount[];
 }) {
-  const [uploadedImages, setUploadedImages] = useState<
-    { public_id: string; secure_url: string }[]
-  >([]);
+  const [uploadedImages, setUploadedImages] = useState<UploadedImages[]>([]);
+
   // Callback function to handle uploaded image info
-  const handleUploadSuccess = (fileInfo: {
-    public_id: string;
-    secure_url: string;
-  }) => {
-    setUploadedImages((prev) => [...prev, fileInfo]);
+  // Update handleUploadSuccess to check for duplicates
+  const handleUploadSuccess = (fileInfo: UploadedImages) => {
+    setUploadedImages((prev) => {
+      // Check if image already exists
+      const exists = prev.some((img) => img.public_id === fileInfo.public_id);
+      if (exists) {
+        toast({
+          title: "Duplicate Image",
+          description: "This image has already been uploaded.",
+          variant: "destructive",
+        });
+        return prev;
+      }
+      return [...prev, fileInfo];
+    });
   };
 
   // Callback function to handle file removal
@@ -58,9 +77,6 @@ export default function ProductForm({
     );
   };
 
-  useEffect(() => {
-    console.log("Updated images:", uploadedImages);
-  }, [uploadedImages]);
   // State for search values
   const [brandSearchValue, setBrandSearchValue] = useState<string>("");
   const [manufacturerSearchValue, setManufacturerSearchValue] =
@@ -120,16 +136,23 @@ export default function ProductForm({
     },
   });
 
+  useEffect(() => {
+    form.setValue(
+      "images",
+      uploadedImages.map((img) => img.url),
+    );
+  }, [uploadedImages, form]);
+
   const onSubmit = async (data: ProductFormData) => {
     try {
-      toast(
+      sonnerToast(
         <pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4">
           <code className="text-white">{JSON.stringify(data, null, 2)}</code>
         </pre>,
       );
     } catch (error) {
       console.error("Form submission error", error);
-      toast.error("Failed to submit the form. Please try again.");
+      sonnerToast.error("Failed to submit the form. Please try again.");
     }
   };
   const [state, formAction, isPending] = useActionState(createNewProduct, {
@@ -139,14 +162,52 @@ export default function ProductForm({
 
   return (
     <Form {...form}>
-      <ImageUpload
-        onUploadSuccess={handleUploadSuccess}
-        onRemoveFile={handleRemoveFile}
-      />
+      <ImageUpload onUploadSuccess={handleUploadSuccess} />
       <form
         onSubmit={form.handleSubmit(onSubmit)}
         className="space-y-8 max-w-lg border shadow-black p-2 rounded-md"
       >
+        <FormField
+          control={form.control}
+          name="images"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>*تصاویر محصول</FormLabel>
+              <FormControl>
+                {/* Preview Uploaded Images */}
+                {uploadedImages.length > 0 && (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 w-full">
+                    {uploadedImages.map((file, index) => (
+                      <div key={index} className="relative group">
+                        <CldImage
+                          src={file.thumbnail_url}
+                          alt="Uploaded Image"
+                          width={150}
+                          height={150}
+                          className="rounded-md object-cover w-full h-full"
+                        />
+                        <Button
+                          onClick={() => handleRemoveFile(file.public_id)}
+                          className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-1 rounded-full sm:opacity-0 group-hover:opacity-100 transition-opacity"
+                          size="icon"
+                          variant="destructive"
+                          aria-label="Remove image"
+                        >
+                          <X className="w-4 h-4" />
+                          <span className="sr-only">Remove image</span>
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </FormControl>
+              <FormDescription>
+                تصاویر آپلود شده محصول را اینجا مشاهده کنید
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
         <FormField
           control={form.control}
           name="name"
@@ -288,106 +349,6 @@ export default function ProductForm({
               <FormMessage />
             </FormItem>
           )}
-        />
-        <FormField
-          control={form.control}
-          name="images"
-          render={({ field }) => {
-            const handleAddFiles = (files: FileList | null) => {
-              if (!files) return;
-              const newFiles = Array.from(files);
-              const updatedFiles = [...(field.value || []), ...newFiles];
-              field.onChange(updatedFiles);
-            };
-
-            const handleRemoveFile = (index: number) => {
-              const updatedFiles = field.value.filter((_, i) => i !== index);
-              field.onChange(updatedFiles);
-            };
-
-            const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-              e.preventDefault();
-              e.stopPropagation();
-            };
-
-            const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handleAddFiles(e.dataTransfer.files);
-            };
-
-            return (
-              <FormItem>
-                <FormLabel>*تصاویر محصول</FormLabel>
-                <FormControl>
-                  <div
-                    className="flex items-center justify-center w-full"
-                    onDragOver={handleDragOver}
-                    onDrop={handleDrop}
-                  >
-                    <label
-                      htmlFor="dropzone-file"
-                      className="flex flex-col items-center justify-center w-full h-64 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:hover:bg-bray-800 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-600"
-                    >
-                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                        <UploadCloud className="w-8 h-8 mb-4 text-gray-500 dark:text-gray-400" />
-                        <p className="mb-2 text-sm text-gray-500 dark:text-gray-400">
-                          <span className="font-semibold">
-                            برای افزودن تصویر کلیک کنید
-                          </span>{" "}
-                          یا فایل‌ها را اینجا بکشید
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          SVG, PNG, JPG یا GIF (حداکثر 5Mb)
-                        </p>
-                      </div>
-                      <Input
-                        id="dropzone-file"
-                        type="file"
-                        multiple
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => handleAddFiles(e.target.files)}
-                        onBlur={field.onBlur}
-                        ref={field.ref}
-                        name={field.name}
-                      />
-                    </label>
-                  </div>
-                </FormControl>
-                <FormDescription>تصاویر محصول را انتخاب کنید</FormDescription>
-                <FormMessage />
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mt-4">
-                  {field.value?.map((file, index) => {
-                    const url = URL.createObjectURL(file);
-                    return (
-                      <div key={index} className="relative group">
-                        <Image
-                          src={url}
-                          alt=""
-                          width={200}
-                          height={200}
-                          className="object-cover w-full h-40 rounded-lg"
-                          onLoad={() => URL.revokeObjectURL(url)}
-                        />
-                        <button
-                          onClick={(e) => {
-                            e.preventDefault();
-                            handleRemoveFile(index);
-                          }}
-                          type="button"
-                          className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                        >
-                          <X className="w-4 h-4" />
-                          <span className="sr-only">حذف تصویر</span>
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              </FormItem>
-            );
-          }}
         />
         <FormField
           control={form.control}
