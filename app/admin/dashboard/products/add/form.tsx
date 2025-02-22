@@ -24,15 +24,16 @@ import {
 import { toast as sonnerToast } from "sonner";
 import { Category, Discount } from "@/db/schema";
 import { Textarea } from "@/components/ui/textarea";
-import { useActionState, useEffect, useState } from "react";
+import { startTransition, useActionState, useEffect, useState } from "react";
 import Link from "next/link";
 import { AutoComplete } from "@/components/ui/autocomplete";
 import { useQuery } from "@tanstack/react-query";
-import { X } from "lucide-react";
+import { Loader, RefreshCw, Save, X } from "lucide-react";
 import { createNewProduct } from "./actions";
 import ImageUpload from "./image-upload";
 import { CldImage } from "next-cloudinary";
 import { toast } from "@/hooks/use-toast";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export interface UploadedImages {
   public_id: string;
@@ -144,17 +145,39 @@ export default function ProductForm({
   }, [uploadedImages, form]);
 
   const onSubmit = async (data: ProductFormData) => {
-    try {
-      sonnerToast(
-        <pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4">
-          <code className="text-white">{JSON.stringify(data, null, 2)}</code>
-        </pre>,
-      );
-    } catch (error) {
-      console.error("Form submission error", error);
-      sonnerToast.error("Failed to submit the form. Please try again.");
+    const formData = new FormData();
+
+    Object.entries(data).forEach(([key, value]) => {
+      if (Array.isArray(value)) {
+        value.forEach((val) => {
+          formData.append(key, val.toString());
+        });
+      } else if (value instanceof Date) {
+        formData.append(key, value.toISOString());
+      } else if (typeof value === "number") {
+        formData.append(key, value.toString());
+      } else {
+        formData.append(key, value as string);
+      }
+    });
+
+    // Ensure 'images' is always an array
+    if (data.images && !Array.isArray(data.images)) {
+      data.images = [data.images];
     }
+
+    // Display the form data for debugging
+    sonnerToast(
+      <pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4">
+        <code className="text-white">{JSON.stringify(data, null, 2)}</code>
+      </pre>,
+    );
+
+    startTransition(() => {
+      formAction(formData);
+    });
   };
+
   const [state, formAction, isPending] = useActionState(createNewProduct, {
     message: "",
     success: false,
@@ -164,9 +187,16 @@ export default function ProductForm({
     <Form {...form}>
       <ImageUpload onUploadSuccess={handleUploadSuccess} />
       <form
+        action={formAction}
         onSubmit={form.handleSubmit(onSubmit)}
         className="space-y-8 max-w-lg border shadow-black p-2 rounded-md"
       >
+        {state.success === false && state.message && (
+          <Alert variant="destructive">
+            <AlertTitle>خطا</AlertTitle>
+            <AlertDescription>{state.message}</AlertDescription>
+          </Alert>
+        )}
         <FormField
           control={form.control}
           name="images"
@@ -174,33 +204,35 @@ export default function ProductForm({
             <FormItem>
               <FormLabel>*تصاویر محصول</FormLabel>
               <FormControl>
-                {/* Preview Uploaded Images */}
-                {uploadedImages.length > 0 && (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 w-full">
-                    {uploadedImages.map((file, index) => (
-                      <div key={index} className="relative group">
-                        <CldImage
-                          src={file.thumbnail_url}
-                          alt="Uploaded Image"
-                          width={150}
-                          height={150}
-                          className="rounded-md object-cover w-full h-full"
-                        />
-                        <Button
-                          onClick={() => handleRemoveFile(file.public_id)}
-                          className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-1 rounded-full sm:opacity-0 group-hover:opacity-100 transition-opacity"
-                          size="icon"
-                          variant="destructive"
-                          aria-label="Remove image"
-                        >
-                          <X className="w-4 h-4" />
-                          <span className="sr-only">Remove image</span>
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <input type="hidden" {...field} />
               </FormControl>
+              {/* Preview Uploaded Images */}
+              {uploadedImages.length > 0 && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 w-full">
+                  {uploadedImages.map((file, index) => (
+                    <div key={index} className="relative group">
+                      <CldImage
+                        src={file.thumbnail_url}
+                        alt="Uploaded Image"
+                        width={150}
+                        height={150}
+                        className="rounded-md object-cover w-full h-full"
+                      />
+                      <Button
+                        onClick={() => handleRemoveFile(file.public_id)}
+                        className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-1 rounded-full sm:opacity-0 group-hover:opacity-100 transition-opacity"
+                        size="icon"
+                        variant="destructive"
+                        aria-label="Remove image"
+                      >
+                        <X className="w-4 h-4" />
+                        <span className="sr-only">Remove image</span>
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               <FormDescription>
                 تصاویر آپلود شده محصول را اینجا مشاهده کنید
               </FormDescription>
@@ -637,7 +669,25 @@ export default function ProductForm({
             </FormItem>
           )}
         />
-        <Button type="submit">Submit</Button>
+        <div className="flex justify-between px-0">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => form.reset()}
+            disabled={isPending}
+          >
+            <RefreshCw className="w-4 h-4 " />
+            ریست
+          </Button>
+          <Button type="submit" disabled={isPending}>
+            {isPending ? (
+              <Loader className="w-4 h-4  animate-spin" />
+            ) : (
+              <Save className="w-4 h-4 " />
+            )}
+            {isPending ? "درحال ذخیره..." : "ذخیره"}
+          </Button>
+        </div>
       </form>
     </Form>
   );

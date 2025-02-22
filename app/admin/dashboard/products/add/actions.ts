@@ -17,20 +17,43 @@ export async function createNewProduct(
   _prevstate: FormState,
   formData: FormData,
 ): Promise<FormState> {
-  const data = Object.fromEntries(formData.entries());
-  console.log("Form Data", data);
+  const convertToNumberOrNull = (
+    value: FormDataEntryValue | null,
+  ): number | null => {
+    const num = Number(value);
+    return isNaN(num) ? null : num;
+  };
 
-  const fields: Record<string, string> = Object.fromEntries(
-    Object.entries(formData).map(([key, value]) => [key, value.toString()]),
-  );
-
+  const data = {
+    name: formData.get("name"),
+    description: formData.get("description"),
+    price: convertToNumberOrNull(formData.get("price")),
+    SKU: formData.get("SKU"),
+    stock: convertToNumberOrNull(formData.get("stock")),
+    min_order_quantity: convertToNumberOrNull(
+      formData.get("min_order_quantity"),
+    ),
+    max_order_quantity: convertToNumberOrNull(
+      formData.get("max_order_quantity"),
+    ),
+    weight: convertToNumberOrNull(formData.get("weight")),
+    length: convertToNumberOrNull(formData.get("length")),
+    width: convertToNumberOrNull(formData.get("width")),
+    height: convertToNumberOrNull(formData.get("height")),
+    brand_id: convertToNumberOrNull(formData.get("brand_id")),
+    manufacturer_id: convertToNumberOrNull(formData.get("manufacturer_id")),
+    category_id: convertToNumberOrNull(formData.get("category_id")),
+    discount_id: convertToNumberOrNull(formData.get("discount_id")),
+    warranty_id: convertToNumberOrNull(formData.get("warranty_id")),
+    images: formData.getAll("images"),
+  };
+  // Parse with Zod schema (ensure coercion is enabled)
   const parsedData = productSchema.safeParse(data);
-  console.log("Parsed Data", parsedData);
-
+  console.log("server parsed data", parsedData.data);
   if (!parsedData.success) {
+    console.error("Validation errors:", parsedData.error.flatten().fieldErrors);
     return {
-      message: "Missing Fields. Failed to Create Product.",
-      fields,
+      message: "Validation failed",
       issues: parsedData.error.issues.map((issue) => issue.message),
       success: false,
     };
@@ -53,7 +76,7 @@ export async function createNewProduct(
     category_id,
     discount_id,
     warranty_id,
-    images,
+    images: parsedImages,
   } = parsedData.data;
   return { message: "successfull" };
   //try {
