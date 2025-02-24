@@ -174,7 +174,7 @@ export interface ProductTable {
   name: string;
   description: string;
   price: number;
-  SKU: string;
+  sku: string;
   stock: number;
   min_order_quantity: number | null;
   max_order_quantity: number | null;

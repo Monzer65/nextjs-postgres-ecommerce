@@ -120,7 +120,7 @@ export default function ProductForm({
       name: "", // string
       description: "", // string
       price: 0, // number
-      SKU: "", // string
+      sku: "", // string
       stock: 0, // number
       category_id: undefined, // number (required by schema)
       min_order_quantity: null, // number | null
@@ -452,7 +452,7 @@ export default function ProductForm({
         <div className="sm:flex flex-wrap justify-between gap-4 [&>*]:flex-1">
           <FormField
             control={form.control}
-            name="SKU"
+            name="sku"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>*کد کالا</FormLabel>

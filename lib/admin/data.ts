@@ -1,4 +1,5 @@
 import { db } from "@/db/db";
+import { sql } from "kysely";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -7,11 +8,20 @@ export async function getProducts(query: string, currentPage: number) {
 
   try {
     const products = await db
+      .with("product_images", (eb) =>
+        eb
+          .selectFrom("product_image")
+          .select([
+            "product_image.product_id",
+            sql<string[]>`array_agg(product_image.url)`.as("image_urls"),
+          ])
+          .groupBy("product_image.product_id"),
+      )
       .selectFrom("product")
-      .leftJoin("category", "category.id", "product.category_id") // Optional relationship
-      .innerJoin("product_image", "product_image.product_id", "product.id") // Mandatory relationship
-      .innerJoin("brand", "brand.id", "product.brand_id") // Mandatory relationship
-      .innerJoin("manufacturer", "manufacturer.id", "product.manufacturer_id") // Mandatory relationship
+      .leftJoin("category", "category.id", "product.category_id")
+      .innerJoin("brand", "brand.id", "product.brand_id")
+      .innerJoin("manufacturer", "manufacturer.id", "product.manufacturer_id")
+      .innerJoin("product_images", "product_images.product_id", "product.id")
       .select([
         "product.id",
         "product.name",
@@ -19,7 +29,7 @@ export async function getProducts(query: string, currentPage: number) {
         "product.description",
         "product.stock",
         "category.name as category_name",
-        "product_image.url as image_url",
+        "product_images.image_urls",
         "brand.name as brand_name",
         "manufacturer.name as manufacturer_name",
       ])
@@ -27,7 +37,13 @@ export async function getProducts(query: string, currentPage: number) {
         eb.or([
           eb("product.name", "like", `%${query}%`),
           eb("category.name", "like", `%${query}%`),
-          eb("product_image.url", "like", `%${query}%`),
+          eb.exists(
+            eb
+              .selectFrom("product_image")
+              .whereRef("product_image.product_id", "=", "product.id")
+              .where("product_image.url", "like", `%${query}%`)
+              .select("product_image.id"),
+          ),
           eb("brand.name", "like", `%${query}%`),
           eb("manufacturer.name", "like", `%${query}%`),
         ]),
@@ -38,13 +54,32 @@ export async function getProducts(query: string, currentPage: number) {
 
     const totalProducts = await db
       .selectFrom("product")
-      .where("name", "like", `%${query}%`)
-      .select((eb) => eb.fn.countAll().as("products_count"))
+      .leftJoin("category", "category.id", "product.category_id")
+      .innerJoin("brand", "brand.id", "product.brand_id")
+      .innerJoin("manufacturer", "manufacturer.id", "product.manufacturer_id")
+      .where((eb) =>
+        eb.or([
+          eb("product.name", "like", `%${query}%`),
+          eb("category.name", "like", `%${query}%`),
+          eb.exists(
+            eb
+              .selectFrom("product_image")
+              .whereRef("product_image.product_id", "=", "product.id")
+              .where("product_image.url", "like", `%${query}%`)
+              .select("product_image.id"),
+          ),
+          eb("brand.name", "like", `%${query}%`),
+          eb("manufacturer.name", "like", `%${query}%`),
+        ]),
+      )
+      .select((eb) =>
+        eb.fn.count<number>("product.id").distinct().as("products_count"),
+      )
       .execute();
 
     return {
       products,
-      totalProducts: totalProducts[0].products_count,
+      totalProducts: Number(totalProducts[0].products_count),
       currentPage,
       totalPages: Math.ceil(
         Number(totalProducts[0].products_count) / ITEMS_PER_PAGE,
@@ -55,7 +90,6 @@ export async function getProducts(query: string, currentPage: number) {
     throw new Error("Failed to fetch products.");
   }
 }
-
 let dropdownDataCache: any = null;
 const cacheExpiry = 60 * 60 * 1000; // 1 hour
 

@@ -64,10 +64,22 @@ export default function ImageUpload({ onUploadSuccess }: ImageUploadProps) {
           }}
           onError={(error) => {
             console.error("Upload error:", error);
+
+            // Log the error in a more readable format
+            if (error instanceof Error) {
+              console.error("Error message:", error.message);
+              console.error("Stack trace:", error.stack);
+            } else {
+              console.error(
+                "Full error object:",
+                JSON.stringify(error, null, 2),
+              );
+            }
+
             toast({
               title: "Upload failed",
               description:
-                "There was an error uploading your image. Please try again.",
+                "There was an error uploading your image. Please check the console for more details.",
               variant: "destructive",
             });
           }}

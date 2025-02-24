@@ -28,7 +28,7 @@ export async function createNewProduct(
     name: formData.get("name"),
     description: formData.get("description"),
     price: convertToNumberOrNull(formData.get("price")),
-    SKU: formData.get("SKU"),
+    sku: formData.get("sku"),
     stock: convertToNumberOrNull(formData.get("stock")),
     min_order_quantity: convertToNumberOrNull(
       formData.get("min_order_quantity"),
@@ -63,7 +63,7 @@ export async function createNewProduct(
     name,
     description,
     price,
-    SKU,
+    sku,
     stock,
     min_order_quantity,
     max_order_quantity,
@@ -78,41 +78,57 @@ export async function createNewProduct(
     warranty_id,
     images: parsedImages,
   } = parsedData.data;
-  return { message: "successfull" };
-  //try {
-  //  await db
-  //    .insertInto("product")
-  //    .values({
-  //      name,
-  //      description,
-  //      price,
-  //      SKU,
-  //      stock,
-  //      min_order_quantity,
-  //      max_order_quantity,
-  //      weight,
-  //      length,
-  //      width,
-  //      height,
-  //      brand_id: brand_id ?? null,
-  //      manufacturer_id: manufacturer_id ?? null,
-  //      category_id,
-  //      discount_id: discount_id ?? null,
-  //      warranty_id: warranty_id ?? null,
-  //      updated_at: new Date(),
-  //      created_at: new Date().toISOString(),
-  //      deleted_at: null,
-  //    })
-  //    .execute();
-  //} catch (error) {
-  //  return {
-  //    message: "Database Error: Failed to Create Product.",
-  //    success: false,
-  //  };
-  //}
-  //
-  //revalidatePath("/admin/dashboard/products");
-  //redirect("/admin/dashboard/products");
+
+  try {
+    const product = await db
+      .insertInto("product")
+      .values({
+        name,
+        description,
+        price,
+        sku,
+        stock,
+        min_order_quantity,
+        max_order_quantity,
+        weight,
+        length,
+        width,
+        height,
+        brand_id,
+        manufacturer_id,
+        category_id,
+        discount_id,
+        warranty_id,
+        updated_at: new Date(),
+        created_at: new Date().toISOString(),
+        deleted_at: null,
+      })
+      .returning("id")
+      .executeTakeFirst();
+
+    if (product) {
+      const productImages = parsedImages.map((image, index) => ({
+        product_id: product.id,
+        url: image,
+        alt_text: `Image of ${name}`, // You can customize this as needed
+        is_primary: index === 0, // Assuming the first image is the primary one
+        order: index,
+        created_at: new Date().toISOString(),
+        updated_at: new Date(),
+      }));
+
+      await db.insertInto("product_image").values(productImages).execute();
+    }
+  } catch (error) {
+    console.error("Database Error:", error);
+    return {
+      message: "Database Error: Failed to Create Product.",
+      success: false,
+    };
+  }
+
+  revalidatePath("/admin/dashboard/products");
+  redirect("/admin/dashboard/products");
 }
 
 // export type State = {

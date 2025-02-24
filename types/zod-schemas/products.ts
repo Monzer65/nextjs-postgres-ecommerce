@@ -5,7 +5,7 @@ export const productSchema = z.object({
   name: z.string().min(1, "نام محصول ضروری است"),
   description: z.string().min(10, "توضیحات باید حداقل ۱۰ کاراکتر باشد"),
   price: z.number().positive("قیمت محصول باید یک عدد مثبت باشد"),
-  SKU: z.string().min(1, "کد کالا را  وارد کنید"),
+  sku: z.string().min(1, "کد کالا را  وارد کنید"),
   stock: z
     .number()
     .int()
