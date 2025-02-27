@@ -93,7 +93,7 @@ export const getProducts = unstable_cache(
     }
   },
   ["products"],
-  { revalidate: 3600, tags: ["products"] },
+  { revalidate: 36, tags: ["products"] },
 );
 
 let dropdownDataCache: any = null;

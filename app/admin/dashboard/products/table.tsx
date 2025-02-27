@@ -13,6 +13,7 @@ import { getProducts } from "@/lib/admin/data";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { RotateCw, PackageOpen } from "lucide-react";
+import { DeleteProduct } from "./delete-button";
 
 export default async function ProductsTable({
   query,
@@ -55,12 +56,15 @@ export default async function ProductsTable({
       <Table className="relative">
         <caption className="sr-only">لیست محصولات</caption>
         <TableHeader className="bg-muted/50">
-          <TableRow className="hover:bg-transparent [&>*:not(:last-child)]:text-right">
+          <TableRow className="hover:bg-transparent">
             <TableHead className="w-[150px] text-right">تصویر</TableHead>
-            <TableHead className="min-w-[200px]">نام محصول</TableHead>
-            <TableHead className="min-w-[120px]">برند</TableHead>
-            <TableHead className="min-w-[120px]">قیمت</TableHead>
+            <TableHead className="min-w-[200px] text-right">
+              نام محصول
+            </TableHead>
+            <TableHead className="min-w-[120px] text-right">برند</TableHead>
+            <TableHead className="min-w-[120px] text-right">قیمت</TableHead>
             <TableHead className="min-w-[100px] text-center">موجودی</TableHead>
+            <TableHead className="w-[80px] text-center">عملیات</TableHead>
           </TableRow>
         </TableHeader>
 
@@ -98,6 +102,9 @@ export default async function ProductsTable({
                 >
                   {product.stock > 0 ? "موجود" : "ناموجود"}
                 </Badge>
+              </TableCell>
+              <TableCell className="text-center">
+                <DeleteProduct id={product.id} />
               </TableCell>
             </TableRow>
           ))}

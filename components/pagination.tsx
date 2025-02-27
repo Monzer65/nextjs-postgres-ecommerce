@@ -1,9 +1,11 @@
 "use client";
 
-import clsx from "clsx";
-import Link from "next/link";
+import type React from "react";
+
 import { usePathname, useSearchParams } from "next/navigation";
-import { ArrowLeftIcon, ArrowRightIcon } from "lucide-react";
+import Link from "next/link";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export const generatePagination = (currentPage: number, totalPages: number) => {
   // If the total number of pages is 7 or less,
@@ -52,79 +54,74 @@ export default function Pagination({ totalPages }: { totalPages: number }) {
   const allPages = generatePagination(currentPage, totalPages);
 
   return (
-    <div className="inline-flex">
-      <PaginationArrow
-        direction="left"
-        href={createPageURL(currentPage - 1)}
-        isDisabled={currentPage <= 1}
-      />
+    <nav aria-label="Pagination" className="mx-auto flex justify-center">
+      <ul className="flex items-center gap-1">
+        <PaginationArrow
+          direction="prev"
+          href={createPageURL(currentPage - 1)}
+          isDisabled={currentPage <= 1}
+        />
 
-      <div className="flex gap-px">
-        {allPages.map((page, index) => {
-          let position: "first" | "last" | "single" | "middle" | undefined;
+        {allPages.map((page, index) => (
+          <PaginationItem key={index}>
+            {page === "..." ? (
+              <PaginationEllipsis />
+            ) : (
+              <PaginationLink
+                href={createPageURL(page)}
+                isActive={currentPage === page}
+                page={page}
+              />
+            )}
+          </PaginationItem>
+        ))}
 
-          if (index === 0) position = "first";
-          if (index === allPages.length - 1) position = "last";
-          if (allPages.length === 1) position = "single";
-          if (page === "...") position = "middle";
-
-          return (
-            <PaginationNumber
-              key={`${page}-${index}`}
-              href={createPageURL(page)}
-              page={page}
-              position={position}
-              isActive={currentPage === page}
-            />
-          );
-        })}
-      </div>
-
-      <PaginationArrow
-        direction="right"
-        href={createPageURL(currentPage + 1)}
-        isDisabled={currentPage >= totalPages}
-      />
-    </div>
+        <PaginationArrow
+          direction="next"
+          href={createPageURL(currentPage + 1)}
+          isDisabled={currentPage >= totalPages}
+        />
+      </ul>
+    </nav>
   );
 }
 
-function PaginationNumber({
+function PaginationItem({ children }: { children: React.ReactNode }) {
+  return <li className="flex items-center">{children}</li>;
+}
+
+function PaginationLink({
   page,
   href,
   isActive,
-  position,
 }: {
   page: number | string;
   href: string;
-  position?: "first" | "last" | "middle" | "single";
   isActive: boolean;
 }) {
-  const className = clsx(
-    "flex h-10 w-10 items-center justify-center text-sm border transition-all",
-    {
-      "rounded-lg": position === "single",
-      "rounded-l-lg": position === "first",
-      "rounded-r-lg": position === "last",
-      "z-10 bg-blue-600 border-blue-600 text-white shadow-sm": isActive,
-      "hover:bg-blue-50/80 hover:text-blue-600":
-        !isActive && position !== "middle",
-      "text-gray-400 hover:bg-transparent cursor-default":
-        position === "middle",
-      "font-semibold": isActive,
-      "border-gray-200": !isActive,
-    },
-  );
-
-  return isActive || position === "middle" ? (
-    <div className={className} {...(isActive && { "aria-current": "page" })}>
-      {page}
-      {position === "middle" && <span className="sr-only">More pages</span>}
-    </div>
-  ) : (
-    <Link href={href} className={className} aria-label={`Go to page ${page}`}>
+  return (
+    <Link
+      href={href}
+      aria-current={isActive ? "page" : undefined}
+      className={cn(
+        "flex h-9 w-9 items-center justify-center rounded-md text-sm transition-colors",
+        isActive
+          ? "bg-primary text-primary-foreground shadow-sm"
+          : "bg-background hover:bg-accent hover:text-accent-foreground",
+      )}
+      aria-label={`Go to page ${page}`}
+    >
       {page}
     </Link>
+  );
+}
+
+function PaginationEllipsis() {
+  return (
+    <div className="flex h-9 w-9 items-center justify-center text-sm text-muted-foreground">
+      <span className="sr-only">More pages</span>
+      <span aria-hidden="true">...</span>
+    </div>
   );
 }
 
@@ -134,41 +131,35 @@ function PaginationArrow({
   isDisabled,
 }: {
   href: string;
-  direction: "left" | "right";
+  direction: "prev" | "next";
   isDisabled?: boolean;
 }) {
-  const icon =
-    direction === "left" ? (
-      <ArrowRightIcon className="w-4 h-4" />
-    ) : (
-      <ArrowLeftIcon className="w-4 h-4" />
+  const Icon = direction === "prev" ? ChevronRight : ChevronLeft;
+  const ariaLabel = `Go to ${direction === "prev" ? "previous" : "next"} page`;
+
+  if (isDisabled) {
+    return (
+      <li>
+        <span
+          className="flex h-9 w-9 cursor-not-allowed items-center justify-center rounded-md bg-muted text-muted-foreground opacity-50"
+          aria-disabled="true"
+        >
+          <span className="sr-only">{ariaLabel}</span>
+          <Icon className="h-4 w-4" />
+        </span>
+      </li>
     );
+  }
 
-  const className = clsx(
-    "flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 transition-colors",
-    {
-      "text-gray-300 bg-gray-50 cursor-not-allowed": isDisabled,
-      "hover:bg-blue-50/80 hover:text-blue-600 hover:border-blue-200":
-        !isDisabled,
-      "shadow-sm": !isDisabled,
-    },
-  );
-
-  return isDisabled ? (
-    <div
-      className={className}
-      aria-disabled="true"
-      aria-label={`${direction} arrow disabled`}
-    >
-      {icon}
-    </div>
-  ) : (
-    <Link
-      className={className}
-      href={href}
-      aria-label={`Go to ${direction} page`}
-    >
-      {icon}
-    </Link>
+  return (
+    <li>
+      <Link
+        href={href}
+        className="flex h-9 w-9 items-center justify-center rounded-md bg-background text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+        aria-label={ariaLabel}
+      >
+        <Icon className="h-4 w-4" />
+      </Link>
+    </li>
   );
 }
