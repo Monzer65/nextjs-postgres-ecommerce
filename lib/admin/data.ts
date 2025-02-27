@@ -1,95 +1,109 @@
 import { db } from "@/db/db";
 import { sql } from "kysely";
+import { unstable_cache as nextCache } from "next/cache"; // Next.js cache for persistent caching
 
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 1; // Number of items per page
 
-export async function getProducts(query: string, currentPage: number) {
-  const offset = (currentPage - 1) * ITEMS_PER_PAGE;
+// Helper function to generate a cache key
+const getCacheKey = (query: string, currentPage: number) => {
+  return `products-${query}-${currentPage}`;
+};
 
-  try {
-    const products = await db
-      .with("product_images", (eb) =>
-        eb
-          .selectFrom("product_image")
-          .select([
-            "product_image.product_id",
-            sql<string[]>`array_agg(product_image.url)`.as("image_urls"),
-          ])
-          .groupBy("product_image.product_id"),
-      )
-      .selectFrom("product")
-      .leftJoin("category", "category.id", "product.category_id")
-      .innerJoin("brand", "brand.id", "product.brand_id")
-      .innerJoin("manufacturer", "manufacturer.id", "product.manufacturer_id")
-      .innerJoin("product_images", "product_images.product_id", "product.id")
-      .select([
-        "product.id",
-        "product.name",
-        "product.price",
-        "product.description",
-        "product.stock",
-        "category.name as category_name",
-        "product_images.image_urls",
-        "brand.name as brand_name",
-        "manufacturer.name as manufacturer_name",
-      ])
-      .where((eb) =>
-        eb.or([
-          eb("product.name", "like", `%${query}%`),
-          eb("category.name", "like", `%${query}%`),
-          eb.exists(
-            eb
-              .selectFrom("product_image")
-              .whereRef("product_image.product_id", "=", "product.id")
-              .where("product_image.url", "like", `%${query}%`)
-              .select("product_image.id"),
-          ),
-          eb("brand.name", "like", `%${query}%`),
-          eb("manufacturer.name", "like", `%${query}%`),
-        ]),
-      )
-      .limit(ITEMS_PER_PAGE)
-      .offset(offset)
-      .execute();
+// Cached function to fetch products
+export const getProducts = nextCache(
+  async (query: string, currentPage: number) => {
+    const offset = (currentPage - 1) * ITEMS_PER_PAGE;
 
-    const totalProducts = await db
-      .selectFrom("product")
-      .leftJoin("category", "category.id", "product.category_id")
-      .innerJoin("brand", "brand.id", "product.brand_id")
-      .innerJoin("manufacturer", "manufacturer.id", "product.manufacturer_id")
-      .where((eb) =>
-        eb.or([
-          eb("product.name", "like", `%${query}%`),
-          eb("category.name", "like", `%${query}%`),
-          eb.exists(
-            eb
-              .selectFrom("product_image")
-              .whereRef("product_image.product_id", "=", "product.id")
-              .where("product_image.url", "like", `%${query}%`)
-              .select("product_image.id"),
-          ),
-          eb("brand.name", "like", `%${query}%`),
-          eb("manufacturer.name", "like", `%${query}%`),
-        ]),
-      )
-      .select((eb) =>
-        eb.fn.count<number>("product.id").distinct().as("products_count"),
-      )
-      .execute();
+    try {
+      // Fetch products with pagination
+      const products = await db
+        .with("product_images", (eb) =>
+          eb
+            .selectFrom("product_image")
+            .select([
+              "product_image.product_id",
+              sql<string[]>`array_agg(product_image.url)`.as("image_urls"),
+            ])
+            .groupBy("product_image.product_id"),
+        )
+        .selectFrom("product")
+        .leftJoin("category", "category.id", "product.category_id")
+        .innerJoin("brand", "brand.id", "product.brand_id")
+        .innerJoin("manufacturer", "manufacturer.id", "product.manufacturer_id")
+        .innerJoin("product_images", "product_images.product_id", "product.id")
+        .select([
+          "product.id",
+          "product.name",
+          "product.price",
+          "product.description",
+          "product.stock",
+          "category.name as category_name",
+          "product_images.image_urls",
+          "brand.name as brand_name",
+          "manufacturer.name as manufacturer_name",
+        ])
+        .where((eb) =>
+          eb.or([
+            eb("product.name", "ilike", `%${query}%`), // Case-insensitive search
+            eb("category.name", "ilike", `%${query}%`),
+            eb.exists(
+              eb
+                .selectFrom("product_image")
+                .whereRef("product_image.product_id", "=", "product.id")
+                .where("product_image.url", "ilike", `%${query}%`)
+                .select("product_image.id"),
+            ),
+            eb("brand.name", "ilike", `%${query}%`),
+            eb("manufacturer.name", "ilike", `%${query}%`),
+          ]),
+        )
+        .limit(ITEMS_PER_PAGE)
+        .offset(offset)
+        .execute();
 
-    return {
-      products,
-      totalProducts: Number(totalProducts[0].products_count),
-      currentPage,
-      totalPages: Math.ceil(
-        Number(totalProducts[0].products_count) / ITEMS_PER_PAGE,
-      ),
-    };
-  } catch (error) {
-    console.error(error);
-    throw new Error("Failed to fetch products.");
-  }
-}
+      // Fetch total count of products matching the query
+      const totalProducts = await db
+        .selectFrom("product")
+        .leftJoin("category", "category.id", "product.category_id")
+        .innerJoin("brand", "brand.id", "product.brand_id")
+        .innerJoin("manufacturer", "manufacturer.id", "product.manufacturer_id")
+        .where((eb) =>
+          eb.or([
+            eb("product.name", "ilike", `%${query}%`),
+            eb("category.name", "ilike", `%${query}%`),
+            eb.exists(
+              eb
+                .selectFrom("product_image")
+                .whereRef("product_image.product_id", "=", "product.id")
+                .where("product_image.url", "ilike", `%${query}%`)
+                .select("product_image.id"),
+            ),
+            eb("brand.name", "ilike", `%${query}%`),
+            eb("manufacturer.name", "ilike", `%${query}%`),
+          ]),
+        )
+        .select((eb) =>
+          eb.fn.count<number>("product.id").distinct().as("products_count"),
+        )
+        .execute();
+
+      return {
+        products,
+        totalProducts: Number(totalProducts[0].products_count),
+        currentPage,
+        totalPages: Math.ceil(
+          Number(totalProducts[0].products_count) / ITEMS_PER_PAGE,
+        ),
+      };
+    } catch (error) {
+      console.error("Database Error:", error);
+      throw new Error("Failed to fetch products.");
+    }
+  },
+  ["getProducts"], // Cache tag
+  { revalidate: 60 * 5 }, // Revalidate cache every 5 minutes
+);
+
 let dropdownDataCache: any = null;
 const cacheExpiry = 60 * 60 * 1000; // 1 hour
 
