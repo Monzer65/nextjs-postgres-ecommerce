@@ -52,7 +52,7 @@ export default async function ProductsTable({
   }
 
   return (
-    <div className="rounded-lg border shadow-sm overflow-hidden">
+    <div className="rounded-lg border shadow-sm overflow-hidden mt-2">
       <Table className="relative">
         <caption className="sr-only">لیست محصولات</caption>
         <TableHeader className="bg-muted/50">
@@ -74,7 +74,7 @@ export default async function ProductsTable({
               key={index}
               className="transition-colors hover:bg-muted/30 cursor-pointer"
             >
-              <TableCell className="p-2">
+              <TableCell>
                 <div className="relative aspect-square w-20 overflow-hidden rounded-lg border">
                   <Image
                     unoptimized
@@ -100,7 +100,9 @@ export default async function ProductsTable({
                   variant={product.stock > 0 ? "outline" : "destructive"}
                   className="w-20 justify-center"
                 >
-                  {product.stock > 0 ? "موجود" : "ناموجود"}
+                  {product.stock > 0
+                    ? `${new Intl.NumberFormat("fa-Ir").format(product.stock)} عدد`
+                    : "ناموجو"}
                 </Badge>
               </TableCell>
               <TableCell className="text-center">

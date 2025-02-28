@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { Suspense } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import Search from "@/components/search";
 
 export default async function ProductsPage(props: {
   searchParams?: Promise<{ query?: string; page?: string }>;
@@ -46,7 +47,7 @@ export default async function ProductsPage(props: {
               </Button>
             </Link>
           </div>
-
+          <Search placeholder="جستجوی محصولات..." />
           <Suspense
             key={query + currentPage}
             fallback={

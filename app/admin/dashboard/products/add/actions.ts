@@ -27,6 +27,7 @@ export async function createNewProduct(
   const data = {
     name: formData.get("name"),
     description: formData.get("description"),
+    thumbnail: formData.get("thumbnail"),
     price: convertToNumberOrNull(formData.get("price")),
     sku: formData.get("sku"),
     stock: convertToNumberOrNull(formData.get("stock")),
@@ -62,6 +63,7 @@ export async function createNewProduct(
   const {
     name,
     description,
+    thumbnail,
     price,
     sku,
     stock,
@@ -85,6 +87,7 @@ export async function createNewProduct(
       .values({
         name,
         description,
+        thumbnail,
         price,
         sku,
         stock,

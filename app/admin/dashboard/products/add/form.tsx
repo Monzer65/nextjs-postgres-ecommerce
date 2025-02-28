@@ -119,6 +119,7 @@ export default function ProductForm({
     defaultValues: {
       name: "", // string
       description: "", // string
+      thumbnail: "",
       price: 0, // number
       sku: "", // string
       stock: 0, // number
@@ -142,6 +143,7 @@ export default function ProductForm({
       "images",
       uploadedImages.map((img) => img.url),
     );
+    form.setValue("thumbnail", uploadedImages[0]?.thumbnail_url || "");
   }, [uploadedImages, form]);
 
   const onSubmit = async (data: ProductFormData) => {

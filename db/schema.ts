@@ -173,6 +173,7 @@ export interface ProductTable {
   id: Generated<number>;
   name: string;
   description: string;
+  thumbnail: string | null;
   price: number;
   sku: string;
   stock: number;
