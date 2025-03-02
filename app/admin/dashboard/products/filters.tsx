@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { Filter, X } from "lucide-react";
+import { Filter, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -30,6 +30,9 @@ import {
 } from "@/components/ui/accordion";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
+import { useQuery } from "@tanstack/react-query";
+import { Brand, Category } from "@/db/schema";
+import { getBrands, getFilteredBrands } from "@/lib/admin/data";
 
 export default function ProductFiltersComponent() {
   const router = useRouter();
@@ -46,6 +49,10 @@ export default function ProductFiltersComponent() {
   const currentHasReviews = searchParams.get("hasReviews") === "true";
   const currentSortBy = searchParams.get("sortBy") || "";
   const currentSortOrder = searchParams.get("sortOrder") || "";
+  const currentInStock = searchParams.get("inStock") === "true";
+  const currentHasDiscount = searchParams.get("hasDiscount") === "true";
+  const currentIsFeatured = searchParams.get("isFeatured") === "true";
+  const currentOnSale = searchParams.get("onSale") === "true";
 
   // Local state for form values
   const [filters, setFilters] = useState({
@@ -57,12 +64,26 @@ export default function ProductFiltersComponent() {
     hasReviews: currentHasReviews,
     sortBy: currentSortBy,
     sortOrder: currentSortOrder,
+    inStock: currentInStock,
+    hasDiscount: currentHasDiscount,
+    isFeatured: currentIsFeatured,
+    onSale: currentOnSale,
   });
 
   // Count active filters
   const activeFilterCount = Object.entries(filters).filter(([key, value]) => {
-    if (key === "hasReviews") return value === true;
-    return value !== "";
+    // Handle boolean filters
+    if (
+      key === "hasReviews" ||
+      key === "inStock" ||
+      key === "hasDiscount" ||
+      key === "isFeatured" ||
+      key === "onSale"
+    ) {
+      return value === true;
+    }
+    // Handle string/number filters (non-empty)
+    return value !== "" && value !== undefined;
   }).length;
 
   // Create query string from filters
@@ -97,6 +118,10 @@ export default function ProductFiltersComponent() {
       hasReviews: filters.hasReviews || null,
       sortBy: filters.sortBy || null,
       sortOrder: filters.sortOrder || null,
+      inStock: filters.inStock || null,
+      hasDiscount: filters.hasDiscount || null,
+      isFeatured: filters.isFeatured || null,
+      onSale: filters.onSale || null,
     });
 
     router.push(`${pathname}?${queryString}`);
@@ -114,21 +139,31 @@ export default function ProductFiltersComponent() {
       hasReviews: false,
       sortBy: "",
       sortOrder: "",
+      inStock: false,
+      hasDiscount: false,
+      isFeatured: false,
+      onSale: false,
     });
   };
 
   // Mock data for categories and brands - replace with actual data
-  const categories = [
-    { id: "1", name: "الکترونیک" },
-    { id: "2", name: "پوشاک" },
-    { id: "3", name: "لوازم خانگی" },
-  ];
+  const { data: categories, isLoading: isCategoriesLoading } = useQuery<
+    Category[]
+  >({
+    queryKey: ["categoriesData", currentCategoryId],
+    queryFn: async () => {
+      const response = await fetch(`/api/categories`);
+      return response.json();
+    },
+  });
 
-  const brands = [
-    { id: "1", name: "سامسونگ" },
-    { id: "2", name: "اپل" },
-    { id: "3", name: "شیائومی" },
-  ];
+  const { data: brands, isLoading: isBrandsLoading } = useQuery<Brand[]>({
+    queryKey: ["noFilterbrandsData", currentBrandId],
+    queryFn: async () => {
+      const response = await fetch(`/api/brands`);
+      return response.json();
+    },
+  });
 
   return (
     <div>
@@ -143,7 +178,7 @@ export default function ProductFiltersComponent() {
             <Filter className="h-4 w-4" />
             فیلترها
             {activeFilterCount > 0 && (
-              <Badge variant="secondary" className="ml-1">
+              <Badge variant="secondary" className="mr-1 mt-2">
                 {activeFilterCount}
               </Badge>
             )}
@@ -170,8 +205,11 @@ export default function ProductFiltersComponent() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="0">همه دسته‌بندی‌ها</SelectItem>
-                      {categories.map((category) => (
-                        <SelectItem key={category.id} value={category.id}>
+                      {categories?.map((category) => (
+                        <SelectItem
+                          key={category.id}
+                          value={category.id.toString()}
+                        >
                           {category.name}
                         </SelectItem>
                       ))}
@@ -194,8 +232,8 @@ export default function ProductFiltersComponent() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="0">همه برندها</SelectItem>
-                      {brands.map((brand) => (
-                        <SelectItem key={brand.id} value={brand.id}>
+                      {brands?.map((brand) => (
+                        <SelectItem key={brand.id} value={brand.id.toString()}>
                           {brand.name}
                         </SelectItem>
                       ))}
@@ -270,6 +308,7 @@ export default function ProductFiltersComponent() {
               <AccordionItem value="other">
                 <AccordionTrigger>سایر فیلترها</AccordionTrigger>
                 <AccordionContent>
+                  {/* Has Reviews */}
                   <div className="flex items-center space-x-2 space-x-reverse">
                     <Checkbox
                       id="has-reviews"
@@ -279,6 +318,57 @@ export default function ProductFiltersComponent() {
                       }
                     />
                     <Label htmlFor="has-reviews">دارای نظر کاربران</Label>
+                  </div>
+
+                  {/* In Stock */}
+                  <div className="flex items-center space-x-2 space-x-reverse mt-2">
+                    <Checkbox
+                      id="in-stock"
+                      checked={filters.inStock}
+                      onCheckedChange={(checked) =>
+                        setFilters({ ...filters, inStock: checked === true })
+                      }
+                    />
+                    <Label htmlFor="in-stock">موجود در انبار</Label>
+                  </div>
+
+                  {/* Has Discount */}
+                  <div className="flex items-center space-x-2 space-x-reverse mt-2">
+                    <Checkbox
+                      id="has-discount"
+                      checked={filters.hasDiscount}
+                      onCheckedChange={(checked) =>
+                        setFilters({
+                          ...filters,
+                          hasDiscount: checked === true,
+                        })
+                      }
+                    />
+                    <Label htmlFor="has-discount">دارای تخفیف</Label>
+                  </div>
+
+                  {/* Is Featured */}
+                  <div className="flex items-center space-x-2 space-x-reverse mt-2">
+                    <Checkbox
+                      id="is-featured"
+                      checked={filters.isFeatured}
+                      onCheckedChange={(checked) =>
+                        setFilters({ ...filters, isFeatured: checked === true })
+                      }
+                    />
+                    <Label htmlFor="is-featured">محصولات ویژه</Label>
+                  </div>
+
+                  {/* On Sale */}
+                  <div className="flex items-center space-x-2 space-x-reverse mt-2">
+                    <Checkbox
+                      id="on-sale"
+                      checked={filters.onSale}
+                      onCheckedChange={(checked) =>
+                        setFilters({ ...filters, onSale: checked === true })
+                      }
+                    />
+                    <Label htmlFor="on-sale">حراج</Label>
                   </div>
                 </AccordionContent>
               </AccordionItem>
@@ -297,7 +387,7 @@ export default function ProductFiltersComponent() {
                         <SelectValue placeholder="مرتب‌سازی بر اساس" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">پیش‌فرض</SelectItem>
+                        <SelectItem value="default">پیش‌فرض</SelectItem>
                         <SelectItem value="price">قیمت</SelectItem>
                         <SelectItem value="rating">امتیاز</SelectItem>
                         <SelectItem value="created_at">تاریخ</SelectItem>
@@ -340,11 +430,19 @@ export default function ProductFiltersComponent() {
 
       {/* Active Filters Display */}
       {activeFilterCount > 0 && (
-        <div className="flex flex-wrap gap-2 mb-4">
+        <div className="flex flex-wrap gap-2 my-2">
           {filters.categoryId && (
             <Badge variant="secondary" className="flex items-center gap-1">
               دسته‌بندی:{" "}
-              {categories.find((c) => c.id === filters.categoryId)?.name}
+              {isCategoriesLoading ? (
+                <span>
+                  <Loader2 className="animate-spin w-2 h-2" />
+                </span>
+              ) : (
+                categories?.find(
+                  (c) => String(c?.id) === String(filters.categoryId),
+                )?.name || "نامعلوم"
+              )}
               <X
                 className="h-3 w-3 cursor-pointer"
                 onClick={() => {
@@ -358,10 +456,17 @@ export default function ProductFiltersComponent() {
               />
             </Badge>
           )}
-
           {filters.brandId && (
             <Badge variant="secondary" className="flex items-center gap-1">
-              برند: {brands.find((b) => b.id === filters.brandId)?.name}
+              برند:{" "}
+              {isBrandsLoading ? (
+                <span>
+                  <Loader2 className="animate-spin w-2 h-2" />
+                </span>
+              ) : (
+                brands?.find((c) => String(c?.id) === String(filters.brandId))
+                  ?.name || "نامعلوم"
+              )}
               <X
                 className="h-3 w-3 cursor-pointer"
                 onClick={() => {
@@ -443,7 +548,73 @@ export default function ProductFiltersComponent() {
               />
             </Badge>
           )}
+          {filters.inStock && (
+            <Badge variant="secondary" className="flex items-center gap-1">
+              موجود در انبار
+              <X
+                className="h-3 w-3 cursor-pointer"
+                onClick={() => {
+                  setFilters({ ...filters, inStock: false });
+                  const queryString = createQueryString({
+                    ...filters,
+                    inStock: null,
+                  });
+                  router.push(`${pathname}?${queryString}`);
+                }}
+              />
+            </Badge>
+          )}
 
+          {filters.hasDiscount && (
+            <Badge variant="secondary" className="flex items-center gap-1">
+              دارای تخفیف
+              <X
+                className="h-3 w-3 cursor-pointer"
+                onClick={() => {
+                  setFilters({ ...filters, hasDiscount: false });
+                  const queryString = createQueryString({
+                    ...filters,
+                    hasDiscount: null,
+                  });
+                  router.push(`${pathname}?${queryString}`);
+                }}
+              />
+            </Badge>
+          )}
+
+          {filters.isFeatured && (
+            <Badge variant="secondary" className="flex items-center gap-1">
+              ویژه
+              <X
+                className="h-3 w-3 cursor-pointer"
+                onClick={() => {
+                  setFilters({ ...filters, isFeatured: false });
+                  const queryString = createQueryString({
+                    ...filters,
+                    isFeatured: null,
+                  });
+                  router.push(`${pathname}?${queryString}`);
+                }}
+              />
+            </Badge>
+          )}
+
+          {filters.onSale && (
+            <Badge variant="secondary" className="flex items-center gap-1">
+              حراج
+              <X
+                className="h-3 w-3 cursor-pointer"
+                onClick={() => {
+                  setFilters({ ...filters, onSale: false });
+                  const queryString = createQueryString({
+                    ...filters,
+                    onSale: null,
+                  });
+                  router.push(`${pathname}?${queryString}`);
+                }}
+              />
+            </Badge>
+          )}
           {filters.sortBy && filters.sortOrder && (
             <Badge variant="secondary" className="flex items-center gap-1">
               مرتب‌سازی:{" "}

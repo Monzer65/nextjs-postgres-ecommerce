@@ -88,7 +88,9 @@ export default function ProductForm({
   const { data: brandsData, isLoading: isBrandsLoading } = useQuery({
     queryKey: ["brandsData", brandSearchValue],
     queryFn: async () => {
-      const response = await fetch(`/api/brands?filter=${brandSearchValue}`);
+      const response = await fetch(
+        `/api/brands/filtered?filter=${brandSearchValue}`,
+      );
       return response.json();
     },
   });

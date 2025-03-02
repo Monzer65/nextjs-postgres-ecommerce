@@ -235,12 +235,30 @@ export async function getCategories() {
   return data;
 }
 
+export async function getFilteredCategories(filter: string) {
+  const lowerFilter = filter.toLocaleLowerCase();
+  const data = await db.selectFrom("category").selectAll().execute();
+
+  return data
+    .filter(({ name }) => name.toLocaleLowerCase().includes(lowerFilter))
+    .slice(0, 20)
+    .map(({ id, name }) => ({
+      value: id.toString(),
+      label: name,
+    }));
+}
+
 export async function getCategoryById(id: string) {
   const data = await db
     .selectFrom("category")
     .select(["id", "name", "description", "parent_id"])
     .where("id", "=", Number(id))
     .executeTakeFirst();
+  return data;
+}
+
+export async function getBrands() {
+  const data = await db.selectFrom("brand").selectAll().execute();
   return data;
 }
 
