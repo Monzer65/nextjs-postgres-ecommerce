@@ -7,9 +7,24 @@ import { Plus } from "lucide-react";
 import { Suspense } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import Search from "@/components/search";
+import { ProductFilter } from "@/types/product-types";
+import ProductFiltersComponent from "./filters";
 
 export default async function ProductsPage(props: {
-  searchParams?: Promise<{ query?: string; page?: string }>;
+  searchParams?: Promise<{
+    query?: string;
+    page?: string;
+    categoryId?: string;
+    brandId?: string;
+    minPrice?: string;
+    maxPrice?: string;
+    minRating?: string;
+    hasReviews?: string;
+    isFeatured?: string;
+    onSale?: string;
+    sortBy?: string;
+    sortOrder?: string;
+  }>;
 }) {
   const items = [
     { href: "/admin", label: "خانه" },
@@ -17,9 +32,31 @@ export default async function ProductsPage(props: {
     { label: "محصولات" },
   ];
 
-  const searchParams = await props.searchParams;
-  const query = searchParams?.query || "";
+  const searchParams = (await props.searchParams) || {};
   const currentPage = Number(searchParams?.page) || 1;
+  const pageSize = 10;
+  const filter: ProductFilter = {
+    query: searchParams.query,
+    categoryId: searchParams.categoryId
+      ? Number(searchParams.categoryId)
+      : undefined,
+    brandId: searchParams.brandId ? Number(searchParams.brandId) : undefined,
+    minPrice: searchParams.minPrice ? Number(searchParams.minPrice) : undefined,
+    maxPrice: searchParams.maxPrice ? Number(searchParams.maxPrice) : undefined,
+    minRating: searchParams.minRating
+      ? Number(searchParams.minRating)
+      : undefined,
+    hasReviews: searchParams.hasReviews === "true",
+    //isFeatured: searchParams.isFeatured === "true",
+    //onSale: searchParams.onSale === "true",
+    sortBy: searchParams.sortBy as
+      | "price"
+      | "rating"
+      | "created_at"
+      | "name"
+      | undefined,
+    sortOrder: searchParams.sortOrder as "asc" | "desc" | undefined,
+  };
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -47,9 +84,13 @@ export default async function ProductsPage(props: {
               </Button>
             </Link>
           </div>
-          <Search placeholder="جستجوی محصولات..." />
+          <div className="flex gap-4 last:flex-1">
+            <ProductFiltersComponent />
+
+            <Search placeholder="جستجوی محصولات..." />
+          </div>
           <Suspense
-            key={query + currentPage}
+            key={searchParams?.query || "" + currentPage}
             fallback={
               <div className="space-y-4">
                 <Skeleton className="h-[400px] w-full rounded-lg" />
@@ -57,7 +98,11 @@ export default async function ProductsPage(props: {
               </div>
             }
           >
-            <ProductsTable query={query} currentPage={currentPage} />
+            <ProductsTable
+              filter={filter}
+              currentPage={currentPage}
+              pageSize={pageSize}
+            />
           </Suspense>
         </div>
       </main>

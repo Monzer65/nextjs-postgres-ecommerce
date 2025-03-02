@@ -9,20 +9,23 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { getProducts } from "@/lib/admin/data";
+import { getFilteredProducts } from "@/lib/admin/data";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { RotateCw, PackageOpen } from "lucide-react";
 import { DeleteProduct } from "./delete-button";
+import { ProductFilter } from "@/types/product-types";
 
 export default async function ProductsTable({
-  query,
+  filter,
   currentPage,
+  pageSize,
 }: {
-  query: string;
+  filter: ProductFilter;
   currentPage: number;
+  pageSize: number;
 }) {
-  const data = await getProducts(query, currentPage);
+  const data = await getFilteredProducts(filter, currentPage, pageSize);
 
   if (!data)
     return (
@@ -78,7 +81,7 @@ export default async function ProductsTable({
                 <div className="relative aspect-square w-20 overflow-hidden rounded-lg border">
                   <Image
                     unoptimized
-                    src={product.image_urls[0]}
+                    src={product.thumbnail ?? "/camera.svg"}
                     alt={product.name}
                     fill
                     className="object-cover"
@@ -89,7 +92,7 @@ export default async function ProductsTable({
               <TableCell className="font-medium">{product.name}</TableCell>
               <TableCell>
                 <Badge variant="outline" className="text-sm">
-                  {product.brand_name}
+                  {product.brand}
                 </Badge>
               </TableCell>
               <TableCell>

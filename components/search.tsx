@@ -39,7 +39,7 @@ export default function Search({ placeholder, className }: SearchProps) {
       params.delete("query");
     }
     replace(`${pathname}?${params.toString()}`);
-  }, 300);
+  }, 500);
 
   const handleClear = () => {
     setSearchTerm("");

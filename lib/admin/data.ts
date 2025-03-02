@@ -1,91 +1,199 @@
 import { db } from "@/db/db";
+import {
+  FilteredProducts,
+  ProductFilter,
+  ProductResult,
+} from "@/types/product-types";
 import { sql } from "kysely";
 import { unstable_cache } from "next/cache";
 
-const ITEMS_PER_PAGE = 10;
-
-export const getProducts = unstable_cache(
-  async (query: string, currentPage: number) => {
-    const offset = (currentPage - 1) * ITEMS_PER_PAGE;
+export const getFilteredProducts = unstable_cache(
+  async (
+    filter: ProductFilter,
+    currentPage: number,
+    pageSize: number = 10,
+  ): Promise<FilteredProducts> => {
+    const offset = (currentPage - 1) * pageSize;
 
     try {
-      const products = await db
-        .with("product_images", (eb) =>
-          eb
-            .selectFrom("product_image")
-            .select([
-              "product_image.product_id",
-              sql<string[]>`array_agg(product_image.url)`.as("image_urls"),
-            ])
-            .groupBy("product_image.product_id"),
-        )
+      let filteredProducts = db
         .selectFrom("product")
+        .leftJoin("brand", "brand.id", "product.brand_id")
         .leftJoin("category", "category.id", "product.category_id")
-        .innerJoin("brand", "brand.id", "product.brand_id")
-        .innerJoin("manufacturer", "manufacturer.id", "product.manufacturer_id")
-        .innerJoin("product_images", "product_images.product_id", "product.id")
+        .leftJoin("manufacturer", "manufacturer.id", "product.manufacturer_id")
         .select([
           "product.id",
           "product.name",
-          "product.price",
           "product.description",
+          "product.price",
+          "product.sku",
           "product.stock",
-          "category.name as category_name",
-          "product_images.image_urls",
-          "brand.name as brand_name",
-          "manufacturer.name as manufacturer_name",
+          "product.thumbnail",
+          "product.created_at",
+          "category.name as category",
+          "brand.name as brand",
+          "manufacturer.name as manufacturer",
         ])
-        .where((eb) =>
-          eb.or([
-            eb("product.name", "like", `%${query}%`),
-            eb("category.name", "like", `%${query}%`),
-            eb.exists(
-              eb
-                .selectFrom("product_image")
-                .whereRef("product_image.product_id", "=", "product.id")
-                .where("product_image.url", "like", `%${query}%`)
-                .select("product_image.id"),
-            ),
-            eb("brand.name", "like", `%${query}%`),
-            eb("manufacturer.name", "like", `%${query}%`),
-          ]),
-        )
-        .limit(ITEMS_PER_PAGE)
+        .groupBy([
+          "product.id",
+          "category.name",
+          "brand.name",
+          "manufacturer.name",
+        ]);
+
+      // Apply filters
+      if (filter.categoryId) {
+        filteredProducts = filteredProducts.where(
+          "category.id",
+          "=",
+          filter.categoryId,
+        );
+      }
+
+      if (filter.query) {
+        filteredProducts = filteredProducts.where(
+          "product.name",
+          "like",
+          `%${filter.query}%`,
+        );
+      }
+
+      if (filter.brandId) {
+        filteredProducts = filteredProducts.where(
+          "brand.id",
+          "=",
+          filter.brandId,
+        );
+      }
+
+      if (filter.minPrice !== undefined) {
+        filteredProducts = filteredProducts.where(
+          "product.price",
+          ">=",
+          filter.minPrice,
+        );
+      }
+
+      if (filter.maxPrice !== undefined) {
+        filteredProducts = filteredProducts.where(
+          "product.price",
+          "<=",
+          filter.maxPrice,
+        );
+      }
+
+      if (filter.createdAfter) {
+        filteredProducts = filteredProducts.where(
+          "product.created_at",
+          ">=",
+          filter.createdAfter,
+        );
+      }
+
+      if (filter.createdBefore) {
+        filteredProducts = filteredProducts.where(
+          "product.created_at",
+          "<=",
+          filter.createdBefore,
+        );
+      }
+
+      if (filter.inStock !== undefined) {
+        filteredProducts = filteredProducts.where("product.stock", ">", 0);
+      }
+
+      if (filter.outOfStock !== undefined) {
+        filteredProducts = filteredProducts.where("product.stock", "=", 0);
+      }
+
+      //if (filter.minRating !== undefined) {
+      //  filteredProducts = filteredProducts.where(
+      //    "product.rating",
+      //    ">=",
+      //    filter.minRating,
+      //  );
+      //}
+      //
+      //if (filter.hasReviews !== undefined) {
+      //  filteredProducts = filteredProducts.where(
+      //    "product.review_count",
+      //    ">",
+      //    0,
+      //  );
+      //}
+      //
+      //if (filter.hasDiscount !== undefined) {
+      //  filteredProducts = filteredProducts.where(
+      //    "product.discount",
+      //    "is not",
+      //    null,
+      //  );
+      //}
+      //
+      if (filter.lowStockThreshold !== undefined) {
+        filteredProducts = filteredProducts.where(
+          "product.stock",
+          "<=",
+          filter.lowStockThreshold,
+        );
+      }
+
+      //if (filter.isFeatured !== undefined) {
+      //  filteredProducts = filteredProducts.where(
+      //    "product.is_featured",
+      //    "=",
+      //    filter.isFeatured,
+      //  );
+      //}
+      //
+      //if (filter.onSale !== undefined) {
+      //  filteredProducts = filteredProducts.where(
+      //    "product.on_sale",
+      //    "=",
+      //    filter.onSale,
+      //  );
+      //}
+
+      // Apply sorting
+      //if (filter.sortBy) {
+      //  const sortOrder = filter.sortOrder || "asc";
+      //  filteredProducts = filteredProducts.orderBy(
+      //    `product.${filter.sortBy}`,
+      //    sortOrder,
+      //  );
+      //} else {
+      //  // Default sorting by creation date if no sortBy is provided
+      //  filteredProducts = filteredProducts.orderBy(
+      //    "product.created_at",
+      //    "desc",
+      //  );
+      //}
+      //
+      // Count total products
+      const totalProducts = filteredProducts
+        .select(sql<number>`count(product.id)`.as("total"))
+        .executeTakeFirst();
+
+      // Fetch paginated products
+      const dataQuery = filteredProducts
+        .limit(pageSize)
         .offset(offset)
         .execute();
 
-      const totalProducts = await db
-        .selectFrom("product")
-        .leftJoin("category", "category.id", "product.category_id")
-        .innerJoin("brand", "brand.id", "product.brand_id")
-        .innerJoin("manufacturer", "manufacturer.id", "product.manufacturer_id")
-        .where((eb) =>
-          eb.or([
-            eb("product.name", "like", `%${query}%`),
-            eb("category.name", "like", `%${query}%`),
-            eb.exists(
-              eb
-                .selectFrom("product_image")
-                .whereRef("product_image.product_id", "=", "product.id")
-                .where("product_image.url", "like", `%${query}%`)
-                .select("product_image.id"),
-            ),
-            eb("brand.name", "like", `%${query}%`),
-            eb("manufacturer.name", "like", `%${query}%`),
-          ]),
-        )
-        .select((eb) =>
-          eb.fn.count<number>("product.id").distinct().as("products_count"),
-        )
-        .execute();
+      const [products, totalCount] = await Promise.all([
+        dataQuery,
+        totalProducts,
+      ]);
+
+      const totalItems = totalCount?.total ?? 0;
+      const totalPages = Math.ceil(totalItems / pageSize);
 
       return {
-        products,
-        totalProducts: Number(totalProducts[0].products_count),
+        products: products as ProductResult[],
+        totalPages,
         currentPage,
-        totalPages: Math.ceil(
-          Number(totalProducts[0].products_count) / ITEMS_PER_PAGE,
-        ),
+        pageSize,
+        totalItems,
       };
     } catch (error) {
       console.error(error);
@@ -93,7 +201,7 @@ export const getProducts = unstable_cache(
     }
   },
   ["products"],
-  { revalidate: 36, tags: ["products"] },
+  { revalidate: 3600, tags: ["products"] },
 );
 
 let dropdownDataCache: any = null;
