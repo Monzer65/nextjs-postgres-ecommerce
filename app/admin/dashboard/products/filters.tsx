@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { Filter, Loader2, X } from "lucide-react";
+import { Filter, Loader2, X, SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -31,10 +31,15 @@ import {
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
-import { Brand, Category } from "@/db/schema";
-import { getBrands, getFilteredBrands } from "@/lib/admin/data";
+import type { Brand, Category } from "@/db/schema";
 
-export default function ProductFiltersComponent() {
+interface ProductFiltersComponentProps {
+  variant?: "mobile" | "sidebar";
+}
+
+export default function ProductFiltersComponent({
+  variant = "mobile",
+}: ProductFiltersComponentProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -70,6 +75,37 @@ export default function ProductFiltersComponent() {
     onSale: currentOnSale,
   });
 
+  // Update local state when URL params change
+  useEffect(() => {
+    setFilters({
+      categoryId: currentCategoryId,
+      brandId: currentBrandId,
+      minPrice: currentMinPrice,
+      maxPrice: currentMaxPrice,
+      minRating: currentMinRating,
+      hasReviews: currentHasReviews,
+      sortBy: currentSortBy,
+      sortOrder: currentSortOrder,
+      inStock: currentInStock,
+      hasDiscount: currentHasDiscount,
+      isFeatured: currentIsFeatured,
+      onSale: currentOnSale,
+    });
+  }, [
+    currentCategoryId,
+    currentBrandId,
+    currentMinPrice,
+    currentMaxPrice,
+    currentMinRating,
+    currentHasReviews,
+    currentSortBy,
+    currentSortOrder,
+    currentInStock,
+    currentHasDiscount,
+    currentIsFeatured,
+    currentOnSale,
+  ]);
+
   // Count active filters
   const activeFilterCount = Object.entries(filters).filter(([key, value]) => {
     // Handle boolean filters
@@ -96,6 +132,9 @@ export default function ProductFiltersComponent() {
 
       Object.entries(params).forEach(([name, value]) => {
         if (value === undefined || value === null || value === "") {
+          newParams.delete(name);
+        } else if (typeof value === "boolean" && value === false) {
+          // Exclude boolean values that are false
           newParams.delete(name);
         } else {
           newParams.set(name, String(value));
@@ -146,11 +185,24 @@ export default function ProductFiltersComponent() {
     });
   };
 
-  // Mock data for categories and brands - replace with actual data
+  // Apply a single filter immediately
+  const applySingleFilter = (key: string, value: string | boolean | null) => {
+    const newFilters = { ...filters, [key]: value };
+    setFilters(newFilters);
+
+    const queryString = createQueryString({
+      ...filters,
+      [key]: value,
+    });
+
+    router.push(`${pathname}?${queryString}`);
+  };
+
+  // Fetch categories and brands data
   const { data: categories, isLoading: isCategoriesLoading } = useQuery<
     Category[]
   >({
-    queryKey: ["categoriesData", currentCategoryId],
+    queryKey: ["categoriesData"],
     queryFn: async () => {
       const response = await fetch(`/api/categories`);
       return response.json();
@@ -158,41 +210,491 @@ export default function ProductFiltersComponent() {
   });
 
   const { data: brands, isLoading: isBrandsLoading } = useQuery<Brand[]>({
-    queryKey: ["noFilterbrandsData", currentBrandId],
+    queryKey: ["brandsData"],
     queryFn: async () => {
       const response = await fetch(`/api/brands`);
       return response.json();
     },
   });
 
+  // Filter content that's shared between mobile and sidebar variants
+  const filterContent = (
+    <div className="space-y-4">
+      {/* Categories */}
+      <div className="space-y-2">
+        <h3 className="text-sm font-medium">دسته‌بندی</h3>
+        <Select
+          value={filters.categoryId}
+          onValueChange={(value) =>
+            variant === "sidebar"
+              ? applySingleFilter("categoryId", value || "")
+              : setFilters({ ...filters, categoryId: value })
+          }
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="انتخاب دسته‌بندی" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="0">همه دسته‌بندی‌ها</SelectItem>
+            {categories?.map((category) => (
+              <SelectItem key={category.id} value={category.id.toString()}>
+                {category.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Brands */}
+      <div className="space-y-2">
+        <h3 className="text-sm font-medium">برند</h3>
+        <Select
+          value={filters.brandId}
+          onValueChange={(value) =>
+            variant === "sidebar"
+              ? applySingleFilter("brandId", value || "")
+              : setFilters({ ...filters, brandId: value })
+          }
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="انتخاب برند" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="0">همه برندها</SelectItem>
+            {brands?.map((brand) => (
+              <SelectItem key={brand.id} value={brand.id.toString()}>
+                {brand.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Price Range */}
+      <div className="space-y-2">
+        <h3 className="text-sm font-medium">محدوده قیمت</h3>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="space-y-1">
+            <Label htmlFor="min-price" className="text-xs">
+              حداقل
+            </Label>
+            <Input
+              id="min-price"
+              type="number"
+              placeholder="0"
+              value={filters.minPrice}
+              onChange={(e) =>
+                variant === "sidebar"
+                  ? applySingleFilter("minPrice", e.target.value || "")
+                  : setFilters({ ...filters, minPrice: e.target.value })
+              }
+              className="h-8"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="max-price" className="text-xs">
+              حداکثر
+            </Label>
+            <Input
+              id="max-price"
+              type="number"
+              placeholder="1000000"
+              value={filters.maxPrice}
+              onChange={(e) =>
+                variant === "sidebar"
+                  ? applySingleFilter("maxPrice", e.target.value || "")
+                  : setFilters({ ...filters, maxPrice: e.target.value })
+              }
+              className="h-8"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Rating */}
+      <div className="space-y-2">
+        <h3 className="text-sm font-medium">امتیاز</h3>
+        <RadioGroup
+          value={filters.minRating}
+          onValueChange={(value) =>
+            variant === "sidebar"
+              ? applySingleFilter("minRating", value || "")
+              : setFilters({ ...filters, minRating: value })
+          }
+          className="space-y-1 text-right"
+        >
+          <div className="flex items-center space-x-2 justify-end">
+            <Label htmlFor="r0" className="text-sm">
+              همه امتیازها
+            </Label>
+            <RadioGroupItem value="" id="r0" />
+          </div>
+          <div className="flex items-center space-x-2 justify-end">
+            <Label htmlFor="r4" className="text-sm">
+              ۴ ستاره و بالاتر
+            </Label>
+            <RadioGroupItem value="4" id="r4" />
+          </div>
+          <div className="flex items-center space-x-2 justify-end">
+            <Label htmlFor="r3" className="text-sm">
+              ۳ ستاره و بالاتر
+            </Label>
+            <RadioGroupItem value="3" id="r3" />
+          </div>
+          <div className="flex items-center space-x-2 justify-end">
+            <Label htmlFor="r2" className="text-sm text-right">
+              ۲ ستاره و بالاتر
+            </Label>
+            <RadioGroupItem value="2" id="r2" />
+          </div>
+        </RadioGroup>
+      </div>
+
+      {/* Other Filters */}
+      <div className="space-y-2">
+        <h3 className="text-sm font-medium">سایر فیلترها</h3>
+        <div className="space-y-2">
+          <div className="flex items-center space-x-2 space-x-reverse">
+            <Checkbox
+              id="has-reviews"
+              checked={filters.hasReviews}
+              onCheckedChange={(checked) =>
+                variant === "sidebar"
+                  ? applySingleFilter("hasReviews", checked === true)
+                  : setFilters({ ...filters, hasReviews: checked === true })
+              }
+            />
+            <Label htmlFor="has-reviews" className="text-sm">
+              دارای نظر کاربران
+            </Label>
+          </div>
+
+          <div className="flex items-center space-x-2 space-x-reverse">
+            <Checkbox
+              id="in-stock"
+              checked={filters.inStock}
+              onCheckedChange={(checked) =>
+                variant === "sidebar"
+                  ? applySingleFilter("inStock", checked === true)
+                  : setFilters({ ...filters, inStock: checked === true })
+              }
+            />
+            <Label htmlFor="in-stock" className="text-sm">
+              موجود در انبار
+            </Label>
+          </div>
+
+          <div className="flex items-center space-x-2 space-x-reverse">
+            <Checkbox
+              id="has-discount"
+              checked={filters.hasDiscount}
+              onCheckedChange={(checked) =>
+                variant === "sidebar"
+                  ? applySingleFilter("hasDiscount", checked === true)
+                  : setFilters({ ...filters, hasDiscount: checked === true })
+              }
+            />
+            <Label htmlFor="has-discount" className="text-sm">
+              دارای تخفیف
+            </Label>
+          </div>
+
+          <div className="flex items-center space-x-2 space-x-reverse">
+            <Checkbox
+              id="is-featured"
+              checked={filters.isFeatured}
+              onCheckedChange={(checked) =>
+                variant === "sidebar"
+                  ? applySingleFilter("isFeatured", checked === true)
+                  : setFilters({ ...filters, isFeatured: checked === true })
+              }
+            />
+            <Label htmlFor="is-featured" className="text-sm">
+              محصولات ویژه
+            </Label>
+          </div>
+
+          <div className="flex items-center space-x-2 space-x-reverse">
+            <Checkbox
+              id="on-sale"
+              checked={filters.onSale}
+              onCheckedChange={(checked) =>
+                variant === "sidebar"
+                  ? applySingleFilter("onSale", checked === true)
+                  : setFilters({ ...filters, onSale: checked === true })
+              }
+            />
+            <Label htmlFor="on-sale" className="text-sm">
+              حراج
+            </Label>
+          </div>
+        </div>
+      </div>
+
+      {/* Sort */}
+      <div className="space-y-2">
+        <h3 className="text-sm font-medium">مرتب‌سازی</h3>
+        <div className="space-y-2">
+          <Select
+            value={filters.sortBy}
+            onValueChange={(value) => {
+              if (variant === "sidebar") {
+                applySingleFilter("sortBy", value || "");
+                if (value && !filters.sortOrder) {
+                  applySingleFilter("sortOrder", "desc");
+                }
+              } else {
+                setFilters({
+                  ...filters,
+                  sortBy: value,
+                  sortOrder:
+                    value && !filters.sortOrder ? "desc" : filters.sortOrder,
+                });
+              }
+            }}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="مرتب‌سازی بر اساس" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="default">پیش‌فرض</SelectItem>
+              <SelectItem value="price">قیمت</SelectItem>
+              <SelectItem value="rating">امتیاز</SelectItem>
+              <SelectItem value="created_at">تاریخ</SelectItem>
+              <SelectItem value="name">نام</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {filters.sortBy && (
+            <Select
+              value={filters.sortOrder}
+              onValueChange={(value) =>
+                variant === "sidebar"
+                  ? applySingleFilter("sortOrder", value || "")
+                  : setFilters({ ...filters, sortOrder: value })
+              }
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="ترتیب" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="asc">صعودی</SelectItem>
+                <SelectItem value="desc">نزولی</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  // Render active filters badges
+  const renderActiveFilters = () => {
+    if (activeFilterCount === 0) return null;
+
+    return (
+      <div className="flex flex-wrap gap-2 mt-4">
+        {filters.categoryId && (
+          <Badge variant="secondary" className="flex items-center gap-1">
+            دسته‌بندی:{" "}
+            {isCategoriesLoading ? (
+              <span>
+                <Loader2 className="animate-spin w-2 h-2" />
+              </span>
+            ) : (
+              categories?.find(
+                (c) => String(c?.id) === String(filters.categoryId),
+              )?.name || "نامعلوم"
+            )}
+            <X
+              className="h-3 w-3 cursor-pointer"
+              onClick={() => applySingleFilter("categoryId", "")}
+            />
+          </Badge>
+        )}
+
+        {filters.brandId && (
+          <Badge variant="secondary" className="flex items-center gap-1">
+            برند:{" "}
+            {isBrandsLoading ? (
+              <span>
+                <Loader2 className="animate-spin w-2 h-2" />
+              </span>
+            ) : (
+              brands?.find((c) => String(c?.id) === String(filters.brandId))
+                ?.name || "نامعلوم"
+            )}
+            <X
+              className="h-3 w-3 cursor-pointer"
+              onClick={() => applySingleFilter("brandId", "")}
+            />
+          </Badge>
+        )}
+
+        {filters.minPrice && (
+          <Badge variant="secondary" className="flex items-center gap-1">
+            حداقل قیمت: {filters.minPrice}
+            <X
+              className="h-3 w-3 cursor-pointer"
+              onClick={() => applySingleFilter("minPrice", "")}
+            />
+          </Badge>
+        )}
+
+        {filters.maxPrice && (
+          <Badge variant="secondary" className="flex items-center gap-1">
+            حداکثر قیمت: {filters.maxPrice}
+            <X
+              className="h-3 w-3 cursor-pointer"
+              onClick={() => applySingleFilter("maxPrice", "")}
+            />
+          </Badge>
+        )}
+
+        {filters.minRating && (
+          <Badge variant="secondary" className="flex items-center gap-1">
+            حداقل امتیاز: {filters.minRating}
+            <X
+              className="h-3 w-3 cursor-pointer"
+              onClick={() => applySingleFilter("minRating", "")}
+            />
+          </Badge>
+        )}
+
+        {filters.hasReviews && (
+          <Badge variant="secondary" className="flex items-center gap-1">
+            دارای نظر
+            <X
+              className="h-3 w-3 cursor-pointer"
+              onClick={() => applySingleFilter("hasReviews", false)}
+            />
+          </Badge>
+        )}
+
+        {filters.inStock && (
+          <Badge variant="secondary" className="flex items-center gap-1">
+            موجود در انبار
+            <X
+              className="h-3 w-3 cursor-pointer"
+              onClick={() => applySingleFilter("inStock", false)}
+            />
+          </Badge>
+        )}
+
+        {filters.hasDiscount && (
+          <Badge variant="secondary" className="flex items-center gap-1">
+            دارای تخفیف
+            <X
+              className="h-3 w-3 cursor-pointer"
+              onClick={() => applySingleFilter("hasDiscount", false)}
+            />
+          </Badge>
+        )}
+
+        {filters.isFeatured && (
+          <Badge variant="secondary" className="flex items-center gap-1">
+            ویژه
+            <X
+              className="h-3 w-3 cursor-pointer"
+              onClick={() => applySingleFilter("isFeatured", false)}
+            />
+          </Badge>
+        )}
+
+        {filters.onSale && (
+          <Badge variant="secondary" className="flex items-center gap-1">
+            حراج
+            <X
+              className="h-3 w-3 cursor-pointer"
+              onClick={() => applySingleFilter("onSale", false)}
+            />
+          </Badge>
+        )}
+
+        {filters.sortBy && filters.sortOrder && (
+          <Badge variant="secondary" className="flex items-center gap-1">
+            مرتب‌سازی:{" "}
+            {filters.sortBy === "price"
+              ? "قیمت"
+              : filters.sortBy === "rating"
+                ? "امتیاز"
+                : filters.sortBy === "created_at"
+                  ? "تاریخ"
+                  : "نام"}
+            ({filters.sortOrder === "asc" ? "صعودی" : "نزولی"})
+            <X
+              className="h-3 w-3 cursor-pointer"
+              onClick={() => {
+                applySingleFilter("sortBy", "");
+                applySingleFilter("sortOrder", "");
+              }}
+            />
+          </Badge>
+        )}
+
+        {activeFilterCount > 0 && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-xs"
+            onClick={() => {
+              resetFilters();
+              router.push(pathname);
+            }}
+          >
+            پاک کردن همه
+          </Button>
+        )}
+      </div>
+    );
+  };
+
+  // Render based on variant
+  if (variant === "sidebar") {
+    return (
+      <div className="space-y-6">
+        {filterContent}
+        {renderActiveFilters()}
+      </div>
+    );
+  }
+
+  // Mobile variant with sheet
   return (
     <div>
-      {/* Mobile Filter Sheet */}
       <Sheet open={isOpen} onOpenChange={setIsOpen}>
-        <SheetTrigger asChild className="left-4">
+        <SheetTrigger asChild>
           <Button
             variant="outline"
-            className="flex items-center gap-2"
+            size="sm"
+            className="flex items-center gap-2 h-10"
             onClick={() => setIsOpen(true)}
           >
             <Filter className="h-4 w-4" />
             فیلترها
             {activeFilterCount > 0 && (
-              <Badge variant="secondary" className="mr-1 mt-2">
+              <Badge variant="secondary" className="mr-1">
                 {activeFilterCount}
               </Badge>
             )}
           </Button>
         </SheetTrigger>
         <SheetContent side="left" className="w-full sm:max-w-md overflow-auto">
-          <SheetHeader>
-            <SheetTitle>فیلترهای پیشرفته</SheetTitle>
+          <SheetHeader className="my-4">
+            <SheetTitle className="flex items-center gap-2">
+              <SlidersHorizontal className="h-5 w-5" />
+              فیلترهای پیشرفته
+            </SheetTitle>
           </SheetHeader>
 
-          <div className="py-4 space-y-6">
-            <Accordion type="single" collapsible className="w-full">
+          <div className="py-2">
+            <Accordion
+              type="multiple"
+              defaultValue={["category", "brand"]}
+              className="w-full"
+            >
               <AccordionItem value="category">
-                <AccordionTrigger>دسته‌بندی</AccordionTrigger>
+                <AccordionTrigger className="py-3">دسته‌بندی</AccordionTrigger>
                 <AccordionContent>
                   <Select
                     value={filters.categoryId}
@@ -219,7 +721,7 @@ export default function ProductFiltersComponent() {
               </AccordionItem>
 
               <AccordionItem value="brand">
-                <AccordionTrigger>برند</AccordionTrigger>
+                <AccordionTrigger className="py-3">برند</AccordionTrigger>
                 <AccordionContent>
                   <Select
                     value={filters.brandId}
@@ -243,7 +745,9 @@ export default function ProductFiltersComponent() {
               </AccordionItem>
 
               <AccordionItem value="price">
-                <AccordionTrigger>محدوده قیمت</AccordionTrigger>
+                <AccordionTrigger className="py-3">
+                  محدوده قیمت
+                </AccordionTrigger>
                 <AccordionContent>
                   <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
@@ -277,65 +781,80 @@ export default function ProductFiltersComponent() {
               </AccordionItem>
 
               <AccordionItem value="rating">
-                <AccordionTrigger>امتیاز</AccordionTrigger>
+                <AccordionTrigger className="py-3">امتیاز</AccordionTrigger>
                 <AccordionContent>
                   <RadioGroup
                     value={filters.minRating}
                     onValueChange={(value) =>
-                      setFilters({ ...filters, minRating: value })
+                      variant === "mobile"
+                        ? applySingleFilter("minRating", value || "")
+                        : setFilters({ ...filters, minRating: value })
                     }
+                    className="space-y-1 text-right"
                   >
-                    <div className="flex items-center space-x-2 space-x-reverse">
+                    <div className="flex items-center space-x-2 justify-end">
+                      <Label htmlFor="r0" className="text-sm">
+                        همه امتیازها
+                      </Label>
                       <RadioGroupItem value="" id="r0" />
-                      <Label htmlFor="r0">همه امتیازها</Label>
                     </div>
-                    <div className="flex items-center space-x-2 space-x-reverse">
+                    <div className="flex items-center space-x-2 justify-end">
+                      <Label htmlFor="r4" className="text-sm">
+                        ۴ ستاره و بالاتر
+                      </Label>
                       <RadioGroupItem value="4" id="r4" />
-                      <Label htmlFor="r4">4 ستاره و بالاتر</Label>
                     </div>
-                    <div className="flex items-center space-x-2 space-x-reverse">
+                    <div className="flex items-center space-x-2 justify-end">
+                      <Label htmlFor="r3" className="text-sm">
+                        ۳ ستاره و بالاتر
+                      </Label>
                       <RadioGroupItem value="3" id="r3" />
-                      <Label htmlFor="r3">3 ستاره و بالاتر</Label>
                     </div>
-                    <div className="flex items-center space-x-2 space-x-reverse">
+                    <div className="flex items-center space-x-2 justify-end">
+                      <Label htmlFor="r2" className="text-sm text-right">
+                        ۲ ستاره و بالاتر
+                      </Label>
                       <RadioGroupItem value="2" id="r2" />
-                      <Label htmlFor="r2">2 ستاره و بالاتر</Label>
                     </div>
                   </RadioGroup>
                 </AccordionContent>
               </AccordionItem>
 
               <AccordionItem value="other">
-                <AccordionTrigger>سایر فیلترها</AccordionTrigger>
-                <AccordionContent>
+                <AccordionTrigger className="py-3">
+                  سایر فیلترها
+                </AccordionTrigger>
+                <AccordionContent className="space-y-3">
                   {/* Has Reviews */}
                   <div className="flex items-center space-x-2 space-x-reverse">
                     <Checkbox
-                      id="has-reviews"
+                      id="has-reviews-mobile"
                       checked={filters.hasReviews}
                       onCheckedChange={(checked) =>
                         setFilters({ ...filters, hasReviews: checked === true })
                       }
                     />
-                    <Label htmlFor="has-reviews">دارای نظر کاربران</Label>
+                    <Label htmlFor="has-reviews-mobile">
+                      دارای نظر کاربران
+                    </Label>
                   </div>
 
                   {/* In Stock */}
-                  <div className="flex items-center space-x-2 space-x-reverse mt-2">
+                  <div className="flex items-center space-x-2 space-x-reverse">
                     <Checkbox
-                      id="in-stock"
+                      id="in-stock-mobile"
                       checked={filters.inStock}
                       onCheckedChange={(checked) =>
                         setFilters({ ...filters, inStock: checked === true })
                       }
                     />
-                    <Label htmlFor="in-stock">موجود در انبار</Label>
+                    <Label htmlFor="in-stock-mobile">موجود در انبار</Label>
                   </div>
 
                   {/* Has Discount */}
-                  <div className="flex items-center space-x-2 space-x-reverse mt-2">
+                  <div className="flex items-center space-x-2 space-x-reverse">
                     <Checkbox
-                      id="has-discount"
+                      id="has-discount-mobile"
                       checked={filters.hasDiscount}
                       onCheckedChange={(checked) =>
                         setFilters({
@@ -344,43 +863,50 @@ export default function ProductFiltersComponent() {
                         })
                       }
                     />
-                    <Label htmlFor="has-discount">دارای تخفیف</Label>
+                    <Label htmlFor="has-discount-mobile">دارای تخفیف</Label>
                   </div>
 
                   {/* Is Featured */}
-                  <div className="flex items-center space-x-2 space-x-reverse mt-2">
+                  <div className="flex items-center space-x-2 space-x-reverse">
                     <Checkbox
-                      id="is-featured"
+                      id="is-featured-mobile"
                       checked={filters.isFeatured}
                       onCheckedChange={(checked) =>
                         setFilters({ ...filters, isFeatured: checked === true })
                       }
                     />
-                    <Label htmlFor="is-featured">محصولات ویژه</Label>
+                    <Label htmlFor="is-featured-mobile">محصولات ویژه</Label>
                   </div>
 
                   {/* On Sale */}
-                  <div className="flex items-center space-x-2 space-x-reverse mt-2">
+                  <div className="flex items-center space-x-2 space-x-reverse">
                     <Checkbox
-                      id="on-sale"
+                      id="on-sale-mobile"
                       checked={filters.onSale}
                       onCheckedChange={(checked) =>
                         setFilters({ ...filters, onSale: checked === true })
                       }
                     />
-                    <Label htmlFor="on-sale">حراج</Label>
+                    <Label htmlFor="on-sale-mobile">حراج</Label>
                   </div>
                 </AccordionContent>
               </AccordionItem>
 
               <AccordionItem value="sort">
-                <AccordionTrigger>مرتب‌سازی</AccordionTrigger>
+                <AccordionTrigger className="py-3">مرتب‌سازی</AccordionTrigger>
                 <AccordionContent>
                   <div className="space-y-4">
                     <Select
                       value={filters.sortBy}
                       onValueChange={(value) =>
-                        setFilters({ ...filters, sortBy: value })
+                        setFilters({
+                          ...filters,
+                          sortBy: value,
+                          sortOrder:
+                            value && !filters.sortOrder
+                              ? "desc"
+                              : filters.sortOrder,
+                        })
                       }
                     >
                       <SelectTrigger>
@@ -417,7 +943,7 @@ export default function ProductFiltersComponent() {
             </Accordion>
           </div>
 
-          <SheetFooter className="flex flex-row gap-2 mt-4">
+          <SheetFooter className="flex flex-row gap-2 mt-6">
             <Button variant="outline" onClick={resetFilters} className="flex-1">
               پاک کردن
             </Button>
@@ -429,231 +955,7 @@ export default function ProductFiltersComponent() {
       </Sheet>
 
       {/* Active Filters Display */}
-      {activeFilterCount > 0 && (
-        <div className="flex flex-wrap gap-2 my-2">
-          {filters.categoryId && (
-            <Badge variant="secondary" className="flex items-center gap-1">
-              دسته‌بندی:{" "}
-              {isCategoriesLoading ? (
-                <span>
-                  <Loader2 className="animate-spin w-2 h-2" />
-                </span>
-              ) : (
-                categories?.find(
-                  (c) => String(c?.id) === String(filters.categoryId),
-                )?.name || "نامعلوم"
-              )}
-              <X
-                className="h-3 w-3 cursor-pointer"
-                onClick={() => {
-                  setFilters({ ...filters, categoryId: "" });
-                  const queryString = createQueryString({
-                    ...filters,
-                    categoryId: null,
-                  });
-                  router.push(`${pathname}?${queryString}`);
-                }}
-              />
-            </Badge>
-          )}
-          {filters.brandId && (
-            <Badge variant="secondary" className="flex items-center gap-1">
-              برند:{" "}
-              {isBrandsLoading ? (
-                <span>
-                  <Loader2 className="animate-spin w-2 h-2" />
-                </span>
-              ) : (
-                brands?.find((c) => String(c?.id) === String(filters.brandId))
-                  ?.name || "نامعلوم"
-              )}
-              <X
-                className="h-3 w-3 cursor-pointer"
-                onClick={() => {
-                  setFilters({ ...filters, brandId: "" });
-                  const queryString = createQueryString({
-                    ...filters,
-                    brandId: null,
-                  });
-                  router.push(`${pathname}?${queryString}`);
-                }}
-              />
-            </Badge>
-          )}
-
-          {filters.minPrice && (
-            <Badge variant="secondary" className="flex items-center gap-1">
-              حداقل قیمت: {filters.minPrice}
-              <X
-                className="h-3 w-3 cursor-pointer"
-                onClick={() => {
-                  setFilters({ ...filters, minPrice: "" });
-                  const queryString = createQueryString({
-                    ...filters,
-                    minPrice: null,
-                  });
-                  router.push(`${pathname}?${queryString}`);
-                }}
-              />
-            </Badge>
-          )}
-
-          {filters.maxPrice && (
-            <Badge variant="secondary" className="flex items-center gap-1">
-              حداکثر قیمت: {filters.maxPrice}
-              <X
-                className="h-3 w-3 cursor-pointer"
-                onClick={() => {
-                  setFilters({ ...filters, maxPrice: "" });
-                  const queryString = createQueryString({
-                    ...filters,
-                    maxPrice: null,
-                  });
-                  router.push(`${pathname}?${queryString}`);
-                }}
-              />
-            </Badge>
-          )}
-
-          {filters.minRating && (
-            <Badge variant="secondary" className="flex items-center gap-1">
-              حداقل امتیاز: {filters.minRating}
-              <X
-                className="h-3 w-3 cursor-pointer"
-                onClick={() => {
-                  setFilters({ ...filters, minRating: "" });
-                  const queryString = createQueryString({
-                    ...filters,
-                    minRating: null,
-                  });
-                  router.push(`${pathname}?${queryString}`);
-                }}
-              />
-            </Badge>
-          )}
-
-          {filters.hasReviews && (
-            <Badge variant="secondary" className="flex items-center gap-1">
-              دارای نظر
-              <X
-                className="h-3 w-3 cursor-pointer"
-                onClick={() => {
-                  setFilters({ ...filters, hasReviews: false });
-                  const queryString = createQueryString({
-                    ...filters,
-                    hasReviews: null,
-                  });
-                  router.push(`${pathname}?${queryString}`);
-                }}
-              />
-            </Badge>
-          )}
-          {filters.inStock && (
-            <Badge variant="secondary" className="flex items-center gap-1">
-              موجود در انبار
-              <X
-                className="h-3 w-3 cursor-pointer"
-                onClick={() => {
-                  setFilters({ ...filters, inStock: false });
-                  const queryString = createQueryString({
-                    ...filters,
-                    inStock: null,
-                  });
-                  router.push(`${pathname}?${queryString}`);
-                }}
-              />
-            </Badge>
-          )}
-
-          {filters.hasDiscount && (
-            <Badge variant="secondary" className="flex items-center gap-1">
-              دارای تخفیف
-              <X
-                className="h-3 w-3 cursor-pointer"
-                onClick={() => {
-                  setFilters({ ...filters, hasDiscount: false });
-                  const queryString = createQueryString({
-                    ...filters,
-                    hasDiscount: null,
-                  });
-                  router.push(`${pathname}?${queryString}`);
-                }}
-              />
-            </Badge>
-          )}
-
-          {filters.isFeatured && (
-            <Badge variant="secondary" className="flex items-center gap-1">
-              ویژه
-              <X
-                className="h-3 w-3 cursor-pointer"
-                onClick={() => {
-                  setFilters({ ...filters, isFeatured: false });
-                  const queryString = createQueryString({
-                    ...filters,
-                    isFeatured: null,
-                  });
-                  router.push(`${pathname}?${queryString}`);
-                }}
-              />
-            </Badge>
-          )}
-
-          {filters.onSale && (
-            <Badge variant="secondary" className="flex items-center gap-1">
-              حراج
-              <X
-                className="h-3 w-3 cursor-pointer"
-                onClick={() => {
-                  setFilters({ ...filters, onSale: false });
-                  const queryString = createQueryString({
-                    ...filters,
-                    onSale: null,
-                  });
-                  router.push(`${pathname}?${queryString}`);
-                }}
-              />
-            </Badge>
-          )}
-          {filters.sortBy && filters.sortOrder && (
-            <Badge variant="secondary" className="flex items-center gap-1">
-              مرتب‌سازی:{" "}
-              {filters.sortBy === "price"
-                ? "قیمت"
-                : filters.sortBy === "rating"
-                  ? "امتیاز"
-                  : filters.sortBy === "created_at"
-                    ? "تاریخ"
-                    : "نام"}
-              ({filters.sortOrder === "asc" ? "صعودی" : "نزولی"})
-              <X
-                className="h-3 w-3 cursor-pointer"
-                onClick={() => {
-                  setFilters({ ...filters, sortBy: "", sortOrder: "" });
-                  const queryString = createQueryString({
-                    ...filters,
-                    sortBy: null,
-                    sortOrder: null,
-                  });
-                  router.push(`${pathname}?${queryString}`);
-                }}
-              />
-            </Badge>
-          )}
-
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 px-2 text-xs"
-            onClick={() => {
-              resetFilters();
-              router.push(pathname);
-            }}
-          >
-            پاک کردن همه
-          </Button>
-        </div>
-      )}
+      {renderActiveFilters()}
     </div>
   );
 }
