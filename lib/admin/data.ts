@@ -11,16 +11,19 @@ export const getFilteredProducts = unstable_cache(
   async (
     filter: ProductFilter,
     currentPage: number,
-    pageSize: number = 10,
+    pageSize: number,
   ): Promise<FilteredProducts> => {
     const offset = (currentPage - 1) * pageSize;
 
     try {
+      console.log("filters:", filter);
       let filteredProducts = db
         .selectFrom("product")
         .leftJoin("brand", "brand.id", "product.brand_id")
         .leftJoin("category", "category.id", "product.category_id")
         .leftJoin("manufacturer", "manufacturer.id", "product.manufacturer_id")
+        .leftJoin("product_review", "product_review.product_id", "product.id")
+        .leftJoin("discount", "product.discount_id", "discount.id")
         .select([
           "product.id",
           "product.name",
@@ -33,16 +36,26 @@ export const getFilteredProducts = unstable_cache(
           "category.name as category",
           "brand.name as brand",
           "manufacturer.name as manufacturer",
+          "discount.discount_value",
+          "product.featured as is_featured",
+          "product.on_sale",
+          //sql<number>`COALESCE(AVG(product_review.rating), 0)`.as(
+          //  "average_rating",
+          //),
+          //sql<number>`COUNT(product_review.id)`.as("review_count"),
         ])
         .groupBy([
           "product.id",
           "category.name",
           "brand.name",
           "manufacturer.name",
+          "discount.discount_value",
+          "product.featured",
+          "product.on_sale",
         ]);
 
       // Apply filters
-      if (filter.categoryId) {
+      if (filter.categoryId !== undefined) {
         filteredProducts = filteredProducts.where(
           "category.id",
           "=",
@@ -58,7 +71,7 @@ export const getFilteredProducts = unstable_cache(
         );
       }
 
-      if (filter.brandId) {
+      if (filter.brandId !== undefined) {
         filteredProducts = filteredProducts.where(
           "brand.id",
           "=",
@@ -82,55 +95,27 @@ export const getFilteredProducts = unstable_cache(
         );
       }
 
-      if (filter.createdAfter) {
-        filteredProducts = filteredProducts.where(
-          "product.created_at",
+      if (filter.minRating !== undefined) {
+        filteredProducts = filteredProducts.having(
+          (eb) => eb.fn.coalesce(eb.fn.avg("product_review.rating"), eb.val(0)),
           ">=",
-          filter.createdAfter,
+          filter.minRating,
         );
       }
 
-      if (filter.createdBefore) {
-        filteredProducts = filteredProducts.where(
-          "product.created_at",
-          "<=",
-          filter.createdBefore,
+      if (filter.hasReviews) {
+        filteredProducts = filteredProducts.having(
+          (eb) => eb.fn.count("product_review.id"),
+          ">",
+          0,
         );
       }
 
-      if (filter.inStock !== undefined) {
+      if (filter.inStock) {
         filteredProducts = filteredProducts.where("product.stock", ">", 0);
       }
 
-      if (filter.outOfStock !== undefined) {
-        filteredProducts = filteredProducts.where("product.stock", "=", 0);
-      }
-
-      //if (filter.minRating !== undefined) {
-      //  filteredProducts = filteredProducts.where(
-      //    "product.rating",
-      //    ">=",
-      //    filter.minRating,
-      //  );
-      //}
-      //
-      //if (filter.hasReviews !== undefined) {
-      //  filteredProducts = filteredProducts.where(
-      //    "product.review_count",
-      //    ">",
-      //    0,
-      //  );
-      //}
-      //
-      //if (filter.hasDiscount !== undefined) {
-      //  filteredProducts = filteredProducts.where(
-      //    "product.discount",
-      //    "is not",
-      //    null,
-      //  );
-      //}
-      //
-      if (filter.lowStockThreshold !== undefined) {
+      if (filter.lowStockThreshold) {
         filteredProducts = filteredProducts.where(
           "product.stock",
           "<=",
@@ -138,37 +123,56 @@ export const getFilteredProducts = unstable_cache(
         );
       }
 
-      //if (filter.isFeatured !== undefined) {
-      //  filteredProducts = filteredProducts.where(
-      //    "product.is_featured",
-      //    "=",
-      //    filter.isFeatured,
-      //  );
-      //}
-      //
-      //if (filter.onSale !== undefined) {
-      //  filteredProducts = filteredProducts.where(
-      //    "product.on_sale",
-      //    "=",
-      //    filter.onSale,
-      //  );
-      //}
+      if (filter.outOfStock) {
+        filteredProducts = filteredProducts.where("product.stock", "=", 0);
+      }
+
+      if (filter.hasDiscount) {
+        filteredProducts = filteredProducts.where(
+          "discount.discount_value",
+          ">",
+          0,
+        );
+      }
+
+      if (filter.isFeatured) {
+        filteredProducts = filteredProducts.where(
+          "product.featured",
+          "=",
+          filter.isFeatured,
+        );
+      }
+
+      if (filter.onSale) {
+        filteredProducts = filteredProducts.where(
+          "product.on_sale",
+          "=",
+          filter.onSale,
+        );
+      }
 
       // Apply sorting
-      //if (filter.sortBy) {
-      //  const sortOrder = filter.sortOrder || "asc";
-      //  filteredProducts = filteredProducts.orderBy(
-      //    `product.${filter.sortBy}`,
-      //    sortOrder,
-      //  );
-      //} else {
-      //  // Default sorting by creation date if no sortBy is provided
-      //  filteredProducts = filteredProducts.orderBy(
-      //    "product.created_at",
-      //    "desc",
-      //  );
-      //}
-      //
+      if (filter.sortBy) {
+        const sortOrder = filter.sortOrder || "asc";
+        if (filter.sortBy === "rating") {
+          filteredProducts = filteredProducts.orderBy(
+            sql`COALESCE(AVG(product_review.rating), 0)`,
+            sortOrder,
+          );
+        } else {
+          filteredProducts = filteredProducts.orderBy(
+            `product.${filter.sortBy}`,
+            sortOrder,
+          );
+        }
+      } else {
+        // Default sorting by crea:tion date if no sortBy is provided
+        filteredProducts = filteredProducts.orderBy(
+          "product.created_at",
+          "desc",
+        );
+      }
+
       // Count total products
       const totalProducts = filteredProducts
         .select(sql<number>`count(product.id)`.as("total"))
@@ -201,7 +205,7 @@ export const getFilteredProducts = unstable_cache(
     }
   },
   ["products"],
-  { revalidate: 3600, tags: ["products"] },
+  { revalidate: 36, tags: ["products"] },
 );
 
 let dropdownDataCache: any = null;

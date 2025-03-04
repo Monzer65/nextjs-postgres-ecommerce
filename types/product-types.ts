@@ -63,9 +63,9 @@ export interface ProductResult {
   manufacturer: string | null;
   thumbnail: string | null;
   created_at: Date;
-  average_rating: number | null; // Added
-  review_count: number | null; // Added
-  discount: number | null; // Added
-  is_featured: boolean | null; // Added
-  on_sale: boolean | null; // Added
+  average_rating: number | null;
+  review_count: number | null;
+  discount_value: number | null;
+  is_featured: boolean | null;
+  on_sale: boolean | null;
 }

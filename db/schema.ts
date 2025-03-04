@@ -177,6 +177,8 @@ export interface ProductTable {
   price: number;
   sku: string;
   stock: number;
+  featured: boolean;
+  on_sale: boolean;
   min_order_quantity: number | null;
   max_order_quantity: number | null;
   weight: number | null;
@@ -300,7 +302,7 @@ export interface ProductReviewTable {
   rating: number;
   title: string | null;
   comment: string | null;
-  images: JSONColumnType<{ url: string; alt_text: string | null }[]> | null;
+  user_images: string[];
   review_status: "pending" | "approved" | "rejected";
   created_at: ColumnType<Date, string | undefined, never>;
   updated_at: ColumnType<Date, Date, Date>;
