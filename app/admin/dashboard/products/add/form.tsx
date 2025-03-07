@@ -100,7 +100,7 @@ export default function ProductForm({
       queryKey: ["manufacturersData", manufacturerSearchValue],
       queryFn: async () => {
         const response = await fetch(
-          `/api/manufacturers?filter=${manufacturerSearchValue}`,
+          `/api/manufacturers/filtered?filter=${manufacturerSearchValue}`,
         );
         return response.json();
       },
@@ -110,7 +110,7 @@ export default function ProductForm({
     queryKey: ["warrantiesData", warrantySearchValue],
     queryFn: async () => {
       const response = await fetch(
-        `/api/warranties?filter=${warrantySearchValue}`,
+        `/api/warranties/filtered?filter=${warrantySearchValue}`,
       );
       return response.json();
     },

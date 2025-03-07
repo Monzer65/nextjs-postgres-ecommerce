@@ -1,4 +1,4 @@
-// app/api/brands/route.ts
+// app/api/brands/filtered/route.ts
 import { NextResponse } from "next/server";
 import { getFilteredBrands } from "@/lib/admin/data";
 

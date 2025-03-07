@@ -205,8 +205,17 @@ export const getFilteredProducts = unstable_cache(
     }
   },
   ["products"],
-  { revalidate: 36, tags: ["products"] },
+  { revalidate: 360, tags: ["products"] }, //6 minutes
 );
+
+export async function getProductById(id: number) {
+  const data = await db
+    .selectFrom("product")
+    .selectAll()
+    .where("id", "=", id)
+    .executeTakeFirst();
+  return data;
+}
 
 let dropdownDataCache: any = null;
 const cacheExpiry = 60 * 60 * 1000; // 1 hour
@@ -279,6 +288,11 @@ export async function getFilteredBrands(filter: string) {
     }));
 }
 
+export async function getManufacturers() {
+  const data = await db.selectFrom("manufacturer").selectAll().execute();
+  return data;
+}
+
 export async function getFilteredManufacturers(filter: string) {
   const lowerFilter = filter.toLocaleLowerCase();
   const data = await db.selectFrom("manufacturer").selectAll().execute();
@@ -294,6 +308,11 @@ export async function getFilteredManufacturers(filter: string) {
 
 export async function getDiscounts() {
   const data = await db.selectFrom("discount").selectAll().execute();
+  return data;
+}
+
+export async function getWarranties() {
+  const data = await db.selectFrom("warranty").selectAll().execute();
   return data;
 }
 

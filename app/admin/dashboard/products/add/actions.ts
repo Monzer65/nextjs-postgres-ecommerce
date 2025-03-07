@@ -47,6 +47,8 @@ export async function createNewProduct(
     discount_id: convertToNumberOrNull(formData.get("discount_id")),
     warranty_id: convertToNumberOrNull(formData.get("warranty_id")),
     images: formData.getAll("images"),
+    featured: formData.get("featured"),
+    on_sale: formData.get("on_sale"),
   };
   // Parse with Zod schema (ensure coercion is enabled)
   const parsedData = productSchema.safeParse(data);
@@ -79,6 +81,8 @@ export async function createNewProduct(
     discount_id,
     warranty_id,
     images: parsedImages,
+    featured,
+    on_sale,
   } = parsedData.data;
 
   try {
@@ -97,6 +101,8 @@ export async function createNewProduct(
         length,
         width,
         height,
+        featured: featured ?? false,
+        on_sale: on_sale ?? false,
         brand_id,
         manufacturer_id,
         category_id,

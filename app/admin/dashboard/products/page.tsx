@@ -90,19 +90,7 @@ export default async function ProductsPage(props: {
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-[240px_1fr] gap-6">
-            {/* Sidebar filters for desktop */}
-            <div className="hidden md:block">
-              <div className="bg-card rounded-lg border shadow-sm p-4 sticky top-6">
-                <h2 className="font-medium mb-4 flex items-center gap-2">
-                  <Filter className="h-4 w-4" />
-                  فیلترهای پیشرفته
-                </h2>
-                <Separator className="mb-4" />
-                <ProductFiltersComponent variant="sidebar" />
-              </div>
-            </div>
-
+          <div className="grid grid-cols-1 md:grid-cols-[1fr_240px] gap-6">
             <div className="space-y-4">
               <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-end md:items-center">
                 {/* Mobile filters */}
@@ -130,6 +118,17 @@ export default async function ProductsPage(props: {
                   pageSize={pageSize}
                 />
               </Suspense>
+            </div>
+            {/* Sidebar filters for desktop */}
+            <div className="hidden md:block">
+              <div className="bg-card rounded-lg border shadow-sm p-4 sticky top-6">
+                <h2 className="font-medium mb-4 flex items-center gap-2">
+                  <Filter className="h-4 w-4" />
+                  فیلترهای پیشرفته
+                </h2>
+                <Separator className="mb-4" />
+                <ProductFiltersComponent variant="sidebar" />
+              </div>
             </div>
           </div>
         </div>

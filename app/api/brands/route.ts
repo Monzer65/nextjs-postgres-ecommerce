@@ -1,4 +1,4 @@
-// app/api/categories/route.ts
+// app/api/brands/route.ts
 import { getBrands } from "@/lib/admin/data";
 
 export async function GET() {
