@@ -44,6 +44,7 @@ export interface UploadedImages {
   height: number;
   width: number;
 }
+
 export default function ProductForm({
   categories,
   discounts,

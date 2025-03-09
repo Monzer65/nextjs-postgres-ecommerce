@@ -2,7 +2,13 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { startTransition, useActionState, useState } from "react";
+import {
+    startTransition,
+    useActionState,
+    useEffect,
+    useRef,
+    useState,
+} from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Plus, X } from "lucide-react";
 
@@ -29,14 +35,18 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { updateProductAction } from "./actions";
-import { toast } from "sonner";
 import {
     productEditSchema,
     type ProductEditFormData,
     prepareProductEditData,
 } from "@/types/zod-schemas/products";
 import { useQuery } from "@tanstack/react-query";
-import { Brand, Manufacturer, Warranty } from "@/db/schema";
+import { Brand, Manufacturer, ProductImage, Warranty } from "@/db/schema";
+import { CldImage } from "next-cloudinary";
+import { UploadedImages } from "../../add/form";
+import ImageUpload from "../../add/image-upload";
+import Image from "next/image";
+import { toast } from "sonner";
 
 const categories = [
     { id: 1, name: "موبایل" },
@@ -76,9 +86,23 @@ export function ProductEditForm({ product }: { product: any }) {
         },
     });
 
-    const [imagePreview, setImagePreview] = useState(product.thumbnail || "");
-    const [images, setImages] = useState<string[]>(product.images || []);
-    const [newImageUrl, setNewImageUrl] = useState("");
+    const { data: imagesData } = useQuery<Partial<ProductImage>[]>({
+        queryKey: ["product_images", product.id], // Add product.id to key for caching
+        queryFn: async () => {
+            const response = await fetch(`/api/images/${product.id}`);
+            if (!response.ok) throw new Error("Failed to fetch images");
+            return response.json();
+        },
+    });
+
+    const originalImagesRef = useRef<Partial<ProductImage>[]>(imagesData || []);
+    const [uploadedImages, setUploadedImages] = useState<UploadedImages[]>([]);
+
+    // Initialize with empty array - the useEffect will populate it
+    const [existingImages, setExistingImages] = useState<Partial<ProductImage>[]>(
+        [],
+    );
+
     const router = useRouter();
 
     // Initialize the form with default values from the product
@@ -86,81 +110,107 @@ export function ProductEditForm({ product }: { product: any }) {
         resolver: zodResolver(productEditSchema),
         defaultValues: prepareProductEditData(product),
     });
-
-    // Handle thumbnail upload
-    const handleThumbnailUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-
-        // Check file size (max 2MB)
-        if (file.size > 2 * 1024 * 1024) {
-            toast.error("حجم تصویر باید کمتر از ۲ مگابایت باشد");
-            return;
+    // Replace the existing useEffect for existingImages with this
+    useEffect(() => {
+        if (imagesData) {
+            setExistingImages(imagesData);
+            originalImagesRef.current = imagesData; // Update the ref with fetched data
         }
+    }, [imagesData]); // Trigger when imagesData changes
 
-        // Check file type
-        if (!file.type.includes("image/")) {
-            toast.error("فایل انتخاب شده باید تصویر باشد");
-            return;
-        }
+    const getMergedImageUrls = (): string[] => {
+        const uniqueUrls = new Set<string>();
 
-        // Create a preview URL
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            if (event.target?.result) {
-                setImagePreview(event.target.result as string);
-                form.setValue("thumbnail", event.target.result as string);
+        // Add existing image URLs
+        existingImages.forEach((img) => {
+            if (img.url) uniqueUrls.add(img.url);
+        });
+
+        // Add uploaded image URLs
+        uploadedImages.forEach((img) => {
+            if (img.url) uniqueUrls.add(img.url);
+        });
+
+        return Array.from(uniqueUrls);
+    };
+
+    useEffect(() => {
+        const mergedImageUrls = getMergedImageUrls();
+        form.setValue("images", mergedImageUrls);
+    }, [uploadedImages, existingImages]);
+
+    const handleUploadSuccess = (fileInfo: UploadedImages) => {
+        setUploadedImages((prev) => {
+            // Check against both uploaded AND existing images
+            const existsInUploaded = prev.some(
+                (img) => img.public_id === fileInfo.public_id,
+            );
+            const existsInExisting = existingImages.some(
+                (img) => img.url === fileInfo.url,
+            );
+
+            if (existsInUploaded || existsInExisting) {
+                toast("این تصویر قبلاً اضافه شده است");
+                return prev;
             }
-        };
-        reader.readAsDataURL(file);
+            return [...prev, fileInfo];
+        });
+        //setUploadedImages((prev) => {
+        //    // Check if image already exists
+        //    const exists = prev.some((img) => img.public_id === fileInfo.public_id);
+        //    if (exists) {
+        //        return prev;
+        //    }
+        //    return [...prev, fileInfo];
+        //});
     };
 
-    // Handle adding a new image URL
-    const handleAddImage = () => {
-        if (!newImageUrl) return;
-
-        try {
-            // Basic URL validation
-            new URL(newImageUrl);
-
-            // Add to images array
-            const updatedImages = [...images, newImageUrl];
-            setImages(updatedImages);
-            form.setValue("images", updatedImages);
-            setNewImageUrl("");
-        } catch (e) {
-            toast.error("آدرس تصویر معتبر نیست");
-        }
+    // Callback function to handle file removal
+    const handleRemoveImageFromUploadedImages = (publicId: string) => {
+        setUploadedImages((prev) =>
+            prev.filter((file) => file.public_id !== publicId),
+        );
     };
 
-    // Handle removing an image
-    const handleRemoveImage = (index: number) => {
-        const updatedImages = images.filter((_, i) => i !== index);
-        setImages(updatedImages);
-        form.setValue("images", updatedImages);
+    const handleremoveImageFromExistingImages = (imageId: number) => {
+        setExistingImages((prevImages) =>
+            prevImages.filter((img) => img.id !== imageId),
+        );
     };
 
-    // Handle form submission
-    //async function onSubmit(values: ProductEditFormData) {
-    //    setIsSubmitting(true);
-    //    try {
-    //        await updateProductAction(product.id, values);
-    //        toast.success("محصول با موفقیت به‌روزرسانی شد");
-    //        router.push("/admin/dashboard/products");
-    //        router.refresh();
-    //    } catch (error) {
-    //        toast.error("خطا در به‌روزرسانی محصول");
-    //        console.error(error);
-    //    } finally {
-    //        setIsSubmitting(false);
-    //    }
-    //}
-    //
-    //
+    // Reset images to the original state from ref
+    const resetImages = () => {
+        setExistingImages([...originalImagesRef.current]);
+    };
+
     const onSubmit = async (data: ProductEditFormData) => {
+        // Parse numeric fields
+        const parsedData = {
+            ...data,
+            price: Number(data.price),
+            stock: Number(data.stock),
+            min_order_quantity: data.min_order_quantity
+                ? Number(data.min_order_quantity)
+                : null,
+            max_order_quantity: data.max_order_quantity
+                ? Number(data.max_order_quantity)
+                : null,
+            weight: data.weight ? Number(data.weight) : null,
+            length: data.length ? Number(data.length) : null,
+            width: data.width ? Number(data.width) : null,
+            height: data.height ? Number(data.height) : null,
+            brand_id: data.brand_id ? Number(data.brand_id) : null,
+            manufacturer_id: data.manufacturer_id
+                ? Number(data.manufacturer_id)
+                : null,
+            category_id: Number(data.category_id),
+            discount_id: data.discount_id ? Number(data.discount_id) : null,
+            warranty_id: data.warranty_id ? Number(data.warranty_id) : null,
+        };
+        const mergedImageUrls = getMergedImageUrls();
+        // Create FormData
         const formData = new FormData();
-
-        Object.entries(data).forEach(([key, value]) => {
+        Object.entries(parsedData).forEach(([key, value]) => {
             if (Array.isArray(value)) {
                 value.forEach((val) => {
                     formData.append(key, val.toString());
@@ -173,26 +223,35 @@ export function ProductEditForm({ product }: { product: any }) {
                 formData.append(key, value as string);
             }
         });
-
+        formData.append("images", JSON.stringify(mergedImageUrls));
         // Ensure 'images' is always an array
-        if (data.images && !Array.isArray(data.images)) {
-            data.images = [data.images];
-        }
+        //if (data.images && !Array.isArray(data.images)) {
+        //    data.images = [data.images];
+        //}
 
-        startTransition(() => {
-            formAction(formData);
-        });
+        // Debug: Log the parsed data
+        toast(
+            <pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4">
+                <code className="text-white">
+                    {JSON.stringify(parsedData, null, 2)}
+                </code>
+            </pre>,
+        );
+
+        // Submit the form data
+        // startTransition(() => {
+        //   formAction(formData);
+        // });
     };
-
-    const [state, formAction, isPending] = useActionState(updateProductAction, {
-        message: "",
-        success: false,
-    });
+    //const [state, formAction, isPending] = useActionState(updateProductAction, {
+    //    message: "",
+    //    success: false,
+    //});
 
     return (
         <Form {...form}>
             <form
-                action={formAction}
+                //action={formAction}
                 onSubmit={form.handleSubmit(onSubmit)}
                 className="space-y-6 max-w-lg border shadow-black p-2 rounded-md"
             >
@@ -664,90 +723,94 @@ export function ProductEditForm({ product }: { product: any }) {
                     </TabsContent>
 
                     <TabsContent value="images" className="space-y-6" dir="rtl">
-                        <FormItem>
-                            <FormLabel>تصویر شاخص</FormLabel>
-                            <FormControl>
-                                <div className="grid gap-4">
-                                    {imagePreview && (
-                                        <div className="relative aspect-square w-40 overflow-hidden rounded-lg border">
-                                            <img
-                                                src={imagePreview || "/placeholder.svg"}
-                                                alt="پیش‌نمایش تصویر"
-                                                className="h-full w-full object-cover"
+                        <ImageUpload onUploadSuccess={handleUploadSuccess} />
+                        <div>
+                            <p>تصاویر تازه آپلود شده</p>
+                            {uploadedImages.length > 0 && (
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 w-full">
+                                    {uploadedImages.map((file, index) => (
+                                        <div key={index} className="relative group">
+                                            <CldImage
+                                                src={file.thumbnail_url}
+                                                alt="Uploaded Image"
+                                                width={150}
+                                                height={150}
+                                                className="rounded-md object-cover w-full h-full"
                                             />
+                                            <Button
+                                                onClick={() =>
+                                                    handleRemoveImageFromUploadedImages(file.public_id)
+                                                }
+                                                className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-1 rounded-full sm:opacity-0 group-hover:opacity-100 transition-opacity"
+                                                size="icon"
+                                                variant="destructive"
+                                                aria-label="Remove image"
+                                            >
+                                                <X className="w-4 h-4" />
+                                                <span className="sr-only">Remove image</span>
+                                            </Button>
                                         </div>
-                                    )}
-                                    <Input
-                                        type="file"
-                                        accept="image/*"
-                                        onChange={handleThumbnailUpload}
-                                        className="cursor-pointer"
-                                    />
+                                    ))}
                                 </div>
-                            </FormControl>
-                            <FormDescription>
-                                حداکثر حجم تصویر ۲ مگابایت با فرمت JPG یا PNG
-                            </FormDescription>
-                        </FormItem>
-
+                            )}
+                        </div>
                         <FormField
                             control={form.control}
                             name="images"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>گالری تصاویر</FormLabel>
+                                    <FormLabel>تصاویر موجود در دیتابیس</FormLabel>
                                     <FormControl>
-                                        <div className="space-y-4">
-                                            <div className="flex gap-2">
-                                                <Input
-                                                    placeholder="آدرس تصویر را وارد کنید"
-                                                    value={newImageUrl}
-                                                    onChange={(e) => setNewImageUrl(e.target.value)}
-                                                />
-                                                <Button
-                                                    type="button"
-                                                    onClick={handleAddImage}
-                                                    size="sm"
-                                                >
-                                                    <Plus className="h-4 w-4 ml-1" />
-                                                    افزودن
-                                                </Button>
-                                            </div>
+                                        <input type="hidden" {...field} />
+                                    </FormControl>
 
-                                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                                                {images.map((image, index) => (
-                                                    <Card key={index} className="overflow-hidden">
-                                                        <div className="relative aspect-square">
+                                    {existingImages.length > 0 && (
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 w-full">
+                                            {existingImages.map(
+                                                (image: Partial<ProductImage>, index: number) => {
+                                                    if (!image) return null;
+                                                    return (
+                                                        <div key={index} className="relative group">
                                                             <img
-                                                                src={image || "/placeholder.svg"}
-                                                                alt={`تصویر ${index + 1}`}
-                                                                className="h-full w-full object-cover"
+                                                                src={image.url}
+                                                                alt={image.alt_text || "product image"}
+                                                                width={150}
+                                                                height={150}
+                                                                className="rounded-md object-cover w-full h-full"
                                                             />
                                                             <Button
                                                                 type="button"
-                                                                variant="destructive"
+                                                                onClick={() =>
+                                                                    handleremoveImageFromExistingImages(
+                                                                        image?.id || index,
+                                                                    )
+                                                                }
+                                                                className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-1 rounded-full sm:opacity-0 group-hover:opacity-100 transition-opacity"
                                                                 size="icon"
-                                                                className="absolute top-2 left-2 h-6 w-6"
-                                                                onClick={() => handleRemoveImage(index)}
+                                                                variant="destructive"
+                                                                aria-label="Remove image"
                                                             >
-                                                                <X className="h-4 w-4" />
+                                                                <X className="w-4 h-4" />
+                                                                <span className="sr-only">Remove image</span>
                                                             </Button>
                                                         </div>
-                                                        <CardContent className="p-2">
-                                                            <p className="text-xs truncate">{image}</p>
-                                                        </CardContent>
-                                                    </Card>
-                                                ))}
-                                            </div>
-
-                                            {field.value.length === 0 && (
-                                                <p className="text-sm text-muted-foreground">
-                                                    حداقل یک تصویر برای محصول الزامی است
-                                                </p>
+                                                    );
+                                                },
                                             )}
                                         </div>
-                                    </FormControl>
+                                    )}
+
+                                    <FormDescription>
+                                        تصاویر آپلود شده محصول را اینجا مشاهده کنید
+                                    </FormDescription>
                                     <FormMessage />
+                                    <Button
+                                        type="button"
+                                        onClick={resetImages}
+                                        className="bg-gray-500 hover:bg-gray-600"
+                                    >
+                                        حالت اولیه{" "}
+                                    </Button>
                                 </FormItem>
                             )}
                         />
@@ -762,12 +825,14 @@ export function ProductEditForm({ product }: { product: any }) {
                     >
                         انصراف
                     </Button>
-                    <Button type="submit" disabled={isPending}>
-                        {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        ذخیره تغییرات
-                    </Button>
+                    <Button type="submit">ذخیره تغییرات</Button>
                 </div>
             </form>
         </Form>
     );
 }
+
+//<Button type="submit" disabled={isPending}>
+//                      {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+//                      ذخیره تغییرات
+//                  </Button>

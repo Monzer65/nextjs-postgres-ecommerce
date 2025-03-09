@@ -98,7 +98,7 @@ export function prepareProductEditData(product: any): ProductEditFormData {
     name: product.name || "",
     description: product.description || "",
     thumbnail: product.thumbnail || null,
-    price: product.price || 0,
+    price: Number(product.price) || 0,
     sku: product.sku || "",
     stock: product.stock || 0,
     min_order_quantity: product.min_order_quantity || null,

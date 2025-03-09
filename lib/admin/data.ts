@@ -1,4 +1,5 @@
 import { db } from "@/db/db";
+import { ProductImage } from "@/db/schema";
 import {
   FilteredProducts,
   ProductFilter,
@@ -327,4 +328,15 @@ export async function getFilteredWarranties(filter: string) {
       value: id.toString(),
       label: name,
     }));
+}
+
+export async function getImagesByProductId(
+  id: number,
+): Promise<ProductImage[]> {
+  const data = await db
+    .selectFrom("product_image")
+    .selectAll()
+    .where("product_id", "=", id)
+    .execute();
+  return data;
 }
