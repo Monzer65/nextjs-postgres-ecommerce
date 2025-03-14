@@ -81,8 +81,18 @@ export const productEditSchema = z.object({
 
   // Product images
   images: z
-    .array(z.string().url("آدرس تصویر معتبر نیست"))
-    .min(1, "حداقل یک تصویر الزامی است"),
+    .array(
+      z.object({
+        url: z.string(),
+        alt_text: z.string().optional(),
+        order: z.number(),
+        is_primary: z.boolean(),
+        // Include optional identifiers for existing/new images
+        id: z.number().optional(),
+        public_id: z.string().optional(),
+      }),
+    )
+    .min("درج حداقل یک تصویر الزامی است"),
 
   // Product flags
   featured: z.boolean().nullable().optional().default(false),

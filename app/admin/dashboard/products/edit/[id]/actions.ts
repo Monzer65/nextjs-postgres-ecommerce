@@ -24,7 +24,7 @@ export async function updateProductAction(
   };
 
   const data = {
-    id: formData.get("id"),
+    id: Number(formData.get("id")),
     name: formData.get("name"),
     description: formData.get("description"),
     thumbnail: formData.get("thumbnail"),
@@ -46,10 +46,11 @@ export async function updateProductAction(
     category_id: convertToNumberOrNull(formData.get("category_id")),
     discount_id: convertToNumberOrNull(formData.get("discount_id")),
     warranty_id: convertToNumberOrNull(formData.get("warranty_id")),
-    images: formData.getAll("images"),
-    featured: formData.get("featured"),
-    on_sale: formData.get("on_sale"),
+    images: JSON.parse(formData.get("images") as string),
+    featured: formData.get("featured") === "true",
+    on_sale: formData.get("on_sale") === "true",
   };
+
   // Parse with Zod schema (ensure coercion is enabled)
   const parsedData = productEditSchema.safeParse(data);
   console.log("server parsed data", parsedData.data);
@@ -86,58 +87,58 @@ export async function updateProductAction(
     on_sale,
   } = parsedData.data;
 
-  try {
-    const product = await db
-      .updateTable("product")
-      .set({
-        name,
-        description,
-        thumbnail,
-        price,
-        sku,
-        stock,
-        min_order_quantity,
-        max_order_quantity,
-        weight,
-        length,
-        width,
-        height,
-        featured: featured ?? false,
-        on_sale: on_sale ?? false,
-        brand_id,
-        manufacturer_id,
-        category_id,
-        discount_id,
-        warranty_id,
-        updated_at: new Date(),
-      })
-      .where("id", "=", Number(id))
-      .executeTakeFirst();
-
-    if (product) {
-      for (const [index, image] of parsedImages.entries()) {
-        await db
-          .updateTable("product_image")
-          .set({
-            url: image,
-            alt_text: `Image of ${name}`,
-            is_primary: index === 0,
-            order: index,
-            updated_at: new Date(),
-          })
-          .where("product_id", "=", id) // Assuming `product_id` is the foreign key
-          .where("order", "=", index) // Update the row with the matching `order`
-          .execute();
-      }
-    }
-  } catch (error) {
-    console.error("Database Error:", error);
-    return {
-      message: "Database Error: Failed to Create Product.",
-      success: false,
-    };
-  }
-
-  revalidatePath("/admin/dashboard/products");
-  redirect("/admin/dashboard/products");
+  //try {
+  //  const product = await db
+  //    .updateTable("product")
+  //    .set({
+  //      name,
+  //      description,
+  //      thumbnail,
+  //      price,
+  //      sku,
+  //      stock,
+  //      min_order_quantity,
+  //      max_order_quantity,
+  //      weight,
+  //      length,
+  //      width,
+  //      height,
+  //      featured: featured ?? false,
+  //      on_sale: on_sale ?? false,
+  //      brand_id,
+  //      manufacturer_id,
+  //      category_id,
+  //      discount_id,
+  //      warranty_id,
+  //      updated_at: new Date(),
+  //    })
+  //    .where("id", "=", Number(id))
+  //    .executeTakeFirst();
+  //
+  //  if (product) {
+  //    for (const [index, image] of parsedImages.entries()) {
+  //      await db
+  //        .updateTable("product_image")
+  //        .set({
+  //          url: image,
+  //          alt_text: `Image of ${name}`,
+  //          is_primary: index === 0,
+  //          order: index,
+  //          updated_at: new Date(),
+  //        })
+  //        .where("product_id", "=", id) // Assuming `product_id` is the foreign key
+  //        .where("order", "=", index) // Update the row with the matching `order`
+  //        .execute();
+  //    }
+  //  }
+  //} catch (error) {
+  //  console.error("Database Error:", error);
+  //  return {
+  //    message: "Database Error: Failed to Create Product.",
+  //    success: false,
+  //  };
+  //}
+  //
+  //revalidatePath("/admin/dashboard/products");
+  //redirect("/admin/dashboard/products");
 }
