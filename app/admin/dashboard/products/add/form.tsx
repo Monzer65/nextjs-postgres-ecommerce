@@ -36,10 +36,12 @@ import { toast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export interface UploadedImages {
+  type: "upload";
   public_id: string;
   secure_url: string;
   url: string;
   thumbnail_url: string;
+  alt_text?: string;
   bytes: number;
   height: number;
   width: number;

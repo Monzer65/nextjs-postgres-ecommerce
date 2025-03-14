@@ -22,7 +22,18 @@ export async function updateProductAction(
     const num = Number(value);
     return isNaN(num) ? null : num;
   };
+  const rawImages = formData.get("images");
+  let parsedImages = [];
 
+  try {
+    parsedImages = rawImages ? JSON.parse(rawImages.toString()) : [];
+  } catch (error) {
+    console.error("Failed to parse images:", error);
+    return {
+      message: "Invalid image data format",
+      success: false,
+    };
+  }
   const data = {
     id: Number(formData.get("id")),
     name: formData.get("name"),
@@ -46,7 +57,7 @@ export async function updateProductAction(
     category_id: convertToNumberOrNull(formData.get("category_id")),
     discount_id: convertToNumberOrNull(formData.get("discount_id")),
     warranty_id: convertToNumberOrNull(formData.get("warranty_id")),
-    images: JSON.parse(formData.get("images") as string),
+    images: parsedImages, // Use safely parsed images
     featured: formData.get("featured") === "true",
     on_sale: formData.get("on_sale") === "true",
   };
@@ -63,30 +74,7 @@ export async function updateProductAction(
     };
   }
 
-  const {
-    id,
-    name,
-    description,
-    thumbnail,
-    price,
-    sku,
-    stock,
-    min_order_quantity,
-    max_order_quantity,
-    weight,
-    length,
-    width,
-    height,
-    brand_id,
-    manufacturer_id,
-    category_id,
-    discount_id,
-    warranty_id,
-    images: parsedImages,
-    featured,
-    on_sale,
-  } = parsedData.data;
-
+  return { success: true, message: "ok" };
   //try {
   //  const product = await db
   //    .updateTable("product")

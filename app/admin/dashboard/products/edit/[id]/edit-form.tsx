@@ -10,7 +10,7 @@ import {
   useState,
 } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Plus, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Loader2, Star, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -33,7 +33,6 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent } from "@/components/ui/card";
 import { updateProductAction } from "./actions";
 import {
   productEditSchema,
@@ -41,12 +40,19 @@ import {
   prepareProductEditData,
 } from "@/types/zod-schemas/products";
 import { useQuery } from "@tanstack/react-query";
-import { Brand, Manufacturer, ProductImage, Warranty } from "@/db/schema";
-import { CldImage } from "next-cloudinary";
+import {
+  Brand,
+  Category,
+  Manufacturer,
+  Product,
+  ProductImage,
+  Warranty,
+} from "@/db/schema";
 import { UploadedImages } from "../../add/form";
 import ImageUpload from "../../add/image-upload";
-import Image from "next/image";
 import { toast } from "sonner";
+import { Card, CardContent } from "@/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const discounts = [
   { id: 1, name: "تخفیف ۱۰٪" },
@@ -54,7 +60,21 @@ const discounts = [
   { id: 3, name: "تخفیف ویژه" },
 ];
 
-export function ProductEditForm({ product }: { product: any }) {
+export interface Image {
+  type: "existing" | "upload";
+  url: string;
+  is_primary: boolean;
+  order: number;
+  id?: number;
+  alt_text?: string | null;
+  public_id?: string;
+  thumbnail_url?: string;
+  bytes?: number;
+  height?: number;
+  width?: number;
+}
+
+export function ProductEditForm({ product }: { product: Product }) {
   const { data: categories } = useQuery({
     queryKey: ["categoriesData"],
     queryFn: async () => {
@@ -87,7 +107,7 @@ export function ProductEditForm({ product }: { product: any }) {
     },
   });
 
-  const { data: imagesData } = useQuery<Partial<ProductImage>[]>({
+  const { data: imagesData } = useQuery<ProductImage[]>({
     queryKey: ["product_images", product.id], // Add product.id to key for caching
     queryFn: async () => {
       const response = await fetch(`/api/images/${product.id}`);
@@ -96,13 +116,8 @@ export function ProductEditForm({ product }: { product: any }) {
     },
   });
 
-  const originalImagesRef = useRef<Partial<ProductImage>[]>(imagesData || []);
-  const [uploadedImages, setUploadedImages] = useState<UploadedImages[]>([]);
-
-  // Initialize with empty array - the useEffect will populate it
-  const [existingImages, setExistingImages] = useState<Partial<ProductImage>[]>(
-    [],
-  );
+  const [images, setImages] = useState<Image[]>([]);
+  const originalImagesRef = useRef<Array<Image>>([]);
 
   const router = useRouter();
 
@@ -112,111 +127,120 @@ export function ProductEditForm({ product }: { product: any }) {
     defaultValues: prepareProductEditData(product),
   });
 
-  // Replace the existing useEffect for existingImages with this
   useEffect(() => {
     if (imagesData) {
-      setExistingImages(imagesData);
-      originalImagesRef.current = imagesData; // Update the ref with fetched data
+      const initialImages = imagesData.map((img) => ({
+        type: "existing" as const,
+        url: img.url,
+        alt_text: img.alt_text,
+        order: img.order,
+        is_primary: img.is_primary,
+        id: img.id,
+        public_id: undefined,
+      }));
+
+      setImages(initialImages);
+      originalImagesRef.current = initialImages;
     }
-  }, [imagesData]); // Trigger when imagesData changes
+  }, [imagesData]);
 
-  const getMergedImages = (): Array<ProductImage | UploadedImages> => {
-    const existing = existingImages.map((img) => ({
-      url: img.url!,
-      alt_text: img.alt_text || "",
-      order: img.order || 0,
-      is_primary: img.is_primary || false,
-      id: img.id, // For existing images
-    }));
+  const handleUploadSuccess = (fileInfo: UploadedImages) => {
+    if (images.some((img) => img.public_id === fileInfo.public_id)) {
+      return;
+    }
 
-    const uploaded = uploadedImages.map((img, index) => ({
-      url: img.url!,
-      alt_text: img.alt_text || "",
-      order: existing.length + index, // Initial order after existing
-      is_primary: false,
-      public_id: img.public_id, // For new uploads
-    }));
-
-    return [...existing, ...uploaded];
+    setImages((prev) => [
+      ...prev,
+      {
+        type: "upload" as const,
+        url: fileInfo.secure_url,
+        alt_text: "",
+        order: prev.length,
+        is_primary: false,
+        id: undefined,
+        public_id: fileInfo.public_id,
+      },
+    ]);
   };
 
-  // Update useEffect to set form value
-  useEffect(() => {
-    const mergedImages = getMergedImages();
-    form.setValue("images", mergedImages);
-  }, [uploadedImages, existingImages]);
-
-  // Move images in the merged array
-  const moveImage = (index: number, direction: "up" | "down") => {
-    const merged = getMergedImages();
-    const newIndex = direction === "up" ? index - 1 : index + 1;
-
-    // Swap positions
-    [merged[index], merged[newIndex]] = [merged[newIndex], merged[index]];
-
-    // Update order properties based on new positions
-    const updated = merged.map((img, idx) => ({ ...img, order: idx }));
-
-    // Split back into existing and uploaded
-    const updatedExisting = updated.filter((img) => "id" in img);
-    const updatedUploaded = updated.filter((img) => "public_id" in img);
-
-    setExistingImages(updatedExisting);
-    setUploadedImages(updatedUploaded);
-  };
-
-  // Add to your component state
-  const [imageOrder, setImageOrder] = useState<string[]>([]);
-
-  // Add drag and drop handlers
-  const handleDragStart = (e: React.DragEvent, index: number) => {
-    e.dataTransfer.setData("index", index.toString());
-  };
-
-  const handleDrop = (e: React.DragEvent, newIndex: number) => {
-    e.preventDefault();
-    const oldIndex = parseInt(e.dataTransfer.getData("index"));
+  const moveImage = (oldIndex: number, newIndex: number) => {
     if (oldIndex === newIndex) return;
 
-    setExistingImages((prev) => {
+    setImages((prev) => {
       const newImages = [...prev];
-      const [moved] = newImages.splice(oldIndex, 1);
-      newImages.splice(newIndex, 0, moved);
-      return newImages.map((img, idx) => ({ ...img, order: idx }));
+      const [movedItem] = newImages.splice(oldIndex, 1);
+      newImages.splice(newIndex, 0, movedItem);
+
+      // Update order for all items
+      return newImages.map((img, index) => ({
+        ...img,
+        order: index,
+      }));
     });
   };
 
-  // Set primary image
-  const handleSetPrimary = (
-    targetImage: ProductImage | UploadedImages,
-    checked: boolean,
-  ) => {
-    const updated = getMergedImages().map((img) => ({
+  // Unified remove function
+  const handleRemoveImage = (index: number) => {
+    setImages((prev) => {
+      const newImages = [...prev];
+      newImages.splice(index, 1);
+      return newImages;
+    });
+  };
+
+  const handleSetPrimary = (targetImage: Image, checked: boolean) => {
+    const updated = images.map((img) => ({
       ...img,
       is_primary: img.url === targetImage.url ? checked : false,
     }));
+    const updatedPrimary = updated.filter((img) => "id" in img);
 
-    // Update state
-    const updatedExisting = updated.filter((img) => "id" in img);
-    const updatedUploaded = updated.filter((img) => "public_id" in img);
-
-    setExistingImages(updatedExisting);
-    setUploadedImages(updatedUploaded);
+    setImages(updatedPrimary);
   };
 
+  // Update form values whenever images change
+  useEffect(() => {
+    const formImages = images.map((img, index) => ({
+      type: img.type as "upload" | "existing",
+      url: img.url,
+      alt_text: img.alt_text || "",
+      order: index,
+      is_primary: img.is_primary || false,
+      id: img.id || undefined,
+      public_id: img.public_id || undefined,
+    }));
+
+    form.setValue("images", formImages);
+  }, [images, form]);
+
+  //// Add drag and drop handlers
+  //const handleDragStart = (e: React.DragEvent, index: number) => {
+  //  e.dataTransfer.setData("index", index.toString());
+  //};
+  //
+  //const handleDrop = (e: React.DragEvent, newIndex: number) => {
+  //  e.preventDefault();
+  //  const oldIndex = parseInt(e.dataTransfer.getData("index"));
+  //  if (oldIndex === newIndex) return;
+  //
+  //  setExistingImages((prev) => {
+  //    const newImages = [...prev];
+  //    const [moved] = newImages.splice(oldIndex, 1);
+  //    newImages.splice(newIndex, 0, moved);
+  //    return newImages.map((img, idx) => ({ ...img, order: idx }));
+  //  });
+  //};
+  //
   // Update alt text
-  const handleAltTextChange = (
-    targetImage: ProductImage | UploadedImages,
-    newAltText: string,
-  ) => {
-    if ("id" in targetImage) {
-      setExistingImages((prev) =>
+  const handleAltTextChange = (targetImage: Image, newAltText: string) => {
+    if (targetImage.id) {
+      setImages((prev) =>
         prev.map((img) =>
           img.id === targetImage.id ? { ...img, alt_text: newAltText } : img,
         ),
       );
     } else {
-      setUploadedImages((prev) =>
+      setImages((prev) =>
         prev.map((img) =>
           img.public_id === targetImage.public_id
             ? { ...img, alt_text: newAltText }
@@ -224,62 +248,6 @@ export function ProductEditForm({ product }: { product: any }) {
         ),
       );
     }
-  };
-  //const getMergedImageUrls = (): string[] => {
-  //  const uniqueUrls = new Set<string>();
-  //
-  //  // Add existing image URLs
-  //  existingImages.forEach((img) => {
-  //    if (img.url) uniqueUrls.add(img.url);
-  //  });
-  //
-  //  // Add uploaded image URLs
-  //  uploadedImages.forEach((img) => {
-  //    if (img.url) uniqueUrls.add(img.url);
-  //  });
-  //
-  //  return Array.from(uniqueUrls);
-  //};
-  //
-  //useEffect(() => {
-  //  const mergedImageUrls = getMergedImageUrls();
-  //  form.setValue("images", mergedImageUrls);
-  //}, [uploadedImages, existingImages]);
-
-  const handleUploadSuccess = (fileInfo: UploadedImages) => {
-    setUploadedImages((prev) => {
-      // Check against both uploaded AND existing images
-      const existsInUploaded = prev.some(
-        (img) => img.public_id === fileInfo.public_id,
-      );
-      const existsInExisting = existingImages.some(
-        (img) => img.url === fileInfo.url,
-      );
-
-      if (existsInUploaded || existsInExisting) {
-        toast("این تصویر قبلاً اضافه شده است");
-        return prev;
-      }
-      return [...prev, fileInfo];
-    });
-  };
-
-  // Callback function to handle file removal
-  const handleRemoveImageFromUploadedImages = (publicId: string) => {
-    setUploadedImages((prev) =>
-      prev.filter((file) => file.public_id !== publicId),
-    );
-  };
-
-  const handleremoveImageFromExistingImages = (imageId: number) => {
-    setExistingImages((prevImages) =>
-      prevImages.filter((img) => img.id !== imageId),
-    );
-  };
-
-  // Reset images to the original state from ref
-  const resetImages = () => {
-    setExistingImages([...originalImagesRef.current]);
   };
 
   const onSubmit = async (data: ProductEditFormData) => {
@@ -289,8 +257,32 @@ export function ProductEditForm({ product }: { product: any }) {
     // Handle each form field appropriately
     Object.entries(data).forEach(([key, value]) => {
       if (key === "images") {
-        // Stringify the array of image objects
-        formData.append(key, JSON.stringify(value));
+        // Stringify the array of image objects with all necessary properties
+        //const processedImages = Array.isArray(value)
+        //  ? value.map((img) => ({
+        //      type: img.type,
+        //      url: img.url,
+        //      alt_text: img.alt_text || "",
+        //      order: img.order,
+        //      is_primary: img.is_primary,
+        //      id: img.id || "",
+        //      public_id: img.public_id || "",
+        //    }))
+        //  : [];
+        const processedImages = images.map((img) => ({
+          type: img.type,
+          url: img.url,
+          alt_text: img.alt_text || "", // Ensure alt_text is a string
+          order: img.order,
+          is_primary: img.is_primary,
+          id: img.id || undefined, // Existing images have id, new ones don't
+          public_id: img.public_id || undefined, // Uploaded images have public_id
+        }));
+
+        formData.append("images", JSON.stringify(processedImages));
+
+        // Debug: Log the processed images
+        console.log("Processed images for submission:", processedImages);
       } else if (Array.isArray(value)) {
         // Handle other arrays (if any exist)
         value.forEach((val) => {
@@ -340,6 +332,13 @@ export function ProductEditForm({ product }: { product: any }) {
         onSubmit={form.handleSubmit(onSubmit)}
         className="space-y-6 max-w-lg border shadow-black p-2 rounded-md"
       >
+        {state.success === false && state.message && (
+          <Alert variant="destructive">
+            <AlertTitle>خطا</AlertTitle>
+            <AlertDescription>{state.message}</AlertDescription>
+          </Alert>
+        )}
+
         <Tabs defaultValue="basic" className="w-full">
           <TabsList className="grid grid-cols-4 mb-6" dir="rtl">
             <TabsTrigger value="basic">اطلاعات اصلی</TabsTrigger>
@@ -399,7 +398,7 @@ export function ProductEditForm({ product }: { product: any }) {
                       </FormControl>
                       <SelectContent>
                         {categories &&
-                          categories.map((category) => (
+                          categories.map((category: Category) => (
                             <SelectItem
                               key={category.id}
                               value={category.id.toString()}
@@ -808,68 +807,117 @@ export function ProductEditForm({ product }: { product: any }) {
           </TabsContent>
 
           <TabsContent value="images" className="space-y-6" dir="rtl">
-            <ImageUpload onUploadSuccess={handleUploadSuccess} />
-
-            {/* Combined Images Display */}
-            <div className="space-y-4">
-              {getMergedImages().map((image, index) => (
-                <div
-                  key={image.id || image.public_id}
-                  className="flex items-center gap-4 relative group"
-                  draggable
-                  onDragStart={(e) => handleDragStart(e, index)}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={(e) => handleDrop(e, index)}
-                >
-                  {/* Reorder Buttons */}
-                  <Button
-                    type="button"
-                    onClick={() => moveImage(index, "up")}
-                    disabled={index === 0}
-                  >
-                    ↑
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={() => moveImage(index, "down")}
-                    disabled={index === uploadedImages.length - 1}
-                  >
-                    ↓
-                  </Button>
-
-                  {/* Image Preview */}
-                  <img
-                    src={image.url}
-                    alt={image.alt_text}
-                    className="h-20 w-20 object-cover"
-                  />
-
-                  {/* Alt Text Input */}
-                  <Input
-                    value={image.alt_text}
-                    onChange={(e) => handleAltTextChange(image, e.target.value)}
-                    placeholder="Alt text"
-                  />
-
-                  {/* Primary Checkbox */}
-                  <Checkbox
-                    checked={image.is_primary}
-                    onCheckedChange={(checked) =>
-                      handleSetPrimary(image, checked)
-                    }
-                  />
-                  <p>Primary</p>
-
-                  {/* Remove Button */}
-                  <Button
-                    variant="destructive"
-                    onClick={() => handleRemoveImage(image)}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
+            <div className="mb-6">
+              <ImageUpload onUploadSuccess={handleUploadSuccess} />
             </div>
+
+            {/* Improved Images Display */}
+            {images.length > 0 ? (
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium">تصاویر محصول</h3>
+                <div className="grid gap-4">
+                  {images.map((image, index) => (
+                    <Card
+                      key={image.id || image.public_id}
+                      className="overflow-hidden"
+                    >
+                      <CardContent className="p-0">
+                        <div className="flex flex-col sm:flex-row">
+                          {/* Image Preview */}
+                          <div className="relative w-full sm:w-1/3">
+                            <img
+                              src={image.url || "/placeholder.svg"}
+                              alt={image.alt_text || "تصویر محصول"}
+                              className="h-40 w-full object-cover"
+                            />
+                            {image.is_primary && (
+                              <div className="absolute top-2 right-2 bg-primary text-primary-foreground rounded-full p-1">
+                                <Star className="h-4 w-4 fill-current" />
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Controls */}
+                          <div className="p-4 w-full sm:w-2/3 space-y-3">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="icon"
+                                  onClick={() => moveImage(index, index - 1)}
+                                  disabled={index === 0}
+                                  className="h-8 w-8"
+                                >
+                                  <ArrowUp className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="icon"
+                                  onClick={() => moveImage(index, index + 1)}
+                                  disabled={index === images.length - 1}
+                                  className="h-8 w-8"
+                                >
+                                  <ArrowDown className="h-4 w-4" />
+                                </Button>
+                                <span className="text-sm text-muted-foreground">
+                                  {index + 1} از {images.length}
+                                </span>
+                              </div>
+
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="icon"
+                                onClick={() => handleRemoveImage(index)}
+                                className="h-8 w-8"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium">
+                                توضیحات تصویر (Alt Text)
+                              </label>
+                              <Input
+                                value={image.alt_text || ""}
+                                onChange={(e) =>
+                                  handleAltTextChange(image, e.target.value)
+                                }
+                                placeholder="توضیحات تصویر"
+                                className="text-right"
+                              />
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              <Checkbox
+                                id={`primary-${image.id || index}`}
+                                checked={image.is_primary}
+                                onCheckedChange={(checked) =>
+                                  handleSetPrimary(image, checked as boolean)
+                                }
+                              />
+                              <label
+                                htmlFor={`primary-${image.id || index}`}
+                                className="text-sm font-medium cursor-pointer"
+                              >
+                                تصویر اصلی
+                              </label>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                هیچ تصویری بارگذاری نشده است
+              </div>
+            )}
           </TabsContent>
         </Tabs>
 
@@ -881,7 +929,7 @@ export function ProductEditForm({ product }: { product: any }) {
           >
             انصراف
           </Button>
-          //
+
           <Button type="submit" disabled={isPending}>
             {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             ذخیره تغییرات
