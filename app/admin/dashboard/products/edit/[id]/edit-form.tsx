@@ -145,24 +145,34 @@ export function ProductEditForm({ product }: { product: Product }) {
   }, [imagesData]);
 
   const handleUploadSuccess = (fileInfo: UploadedImages) => {
-    if (images.some((img) => img.public_id === fileInfo.public_id)) {
-      return;
-    }
-
-    setImages((prev) => [
-      ...prev,
-      {
-        type: "upload" as const,
-        url: fileInfo.secure_url,
-        alt_text: "",
-        order: prev.length,
-        is_primary: false,
-        id: undefined,
-        public_id: fileInfo.public_id,
-      },
-    ]);
+    console.log("handleUploadSuccess called", fileInfo); // Debugging
+    setImages((prev) => {
+      console.log("prev", prev); // Debugging
+      const exists = prev.some((img) => img.public_id === fileInfo.public_id);
+      console.log("exists", exists); // Debugging
+      if (exists) {
+        console.log("Image already exists"); // Debugging
+        return prev;
+      }
+      return [
+        ...prev,
+        {
+          type: "upload" as const,
+          url: fileInfo.secure_url,
+          alt_text: "",
+          order: prev.length,
+          is_primary: false,
+          id: undefined,
+          public_id: fileInfo.public_id,
+        },
+      ];
+    });
   };
 
+  //useEffect(() => {
+  //  console.log("Updated images state:", images); // Debugging
+  //}, [images]);
+  //
   const moveImage = (oldIndex: number, newIndex: number) => {
     if (oldIndex === newIndex) return;
 
