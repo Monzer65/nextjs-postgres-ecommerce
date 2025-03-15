@@ -119,6 +119,11 @@ export function ProductEditForm({ product }: { product: Product }) {
   const [images, setImages] = useState<Image[]>([]);
   const originalImagesRef = useRef<Array<Image>>([]);
 
+  // Ref to store positions before reordering
+  const positionsRef = useRef<Map<string, DOMRect>>(new Map());
+  // State to track which items are animating
+  const [animatingItems, setAnimatingItems] = useState<Set<string>>(new Set());
+
   const router = useRouter();
 
   // Initialize the form with default values from the product
@@ -173,21 +178,105 @@ export function ProductEditForm({ product }: { product: Product }) {
   //  console.log("Updated images state:", images); // Debugging
   //}, [images]);
   //
+  //const moveImage = (oldIndex: number, newIndex: number) => {
+  //  if (oldIndex === newIndex) return;
+  //
+  //  setImages((prev) => {
+  //    const newImages = [...prev];
+  //    const [movedItem] = newImages.splice(oldIndex, 1);
+  //    newImages.splice(newIndex, 0, movedItem);
+  //
+  //    // Update order for all items
+  //    return newImages.map((img, index) => ({
+  //      ...img,
+  //      order: index,
+  //    }));
+  //  });
+  //};
+  //
+  // Function to move an image with animation
   const moveImage = (oldIndex: number, newIndex: number) => {
     if (oldIndex === newIndex) return;
 
-    setImages((prev) => {
-      const newImages = [...prev];
-      const [movedItem] = newImages.splice(oldIndex, 1);
-      newImages.splice(newIndex, 0, movedItem);
-
-      // Update order for all items
-      return newImages.map((img, index) => ({
-        ...img,
-        order: index,
-      }));
+    // Store current positions before reordering
+    const itemsMap = new Map<string, DOMRect>();
+    images.forEach((img) => {
+      const key = img.id || img.public_id || `img-${img.order}`;
+      const element = document.getElementById(`image-item-${key}`);
+      if (element) {
+        itemsMap.set(key as string, element.getBoundingClientRect());
+      }
     });
+    positionsRef.current = itemsMap;
+
+    // Create new array with reordered items
+    const newImages = [...images];
+    const [movedItem] = newImages.splice(oldIndex, 1);
+    newImages.splice(newIndex, 0, movedItem);
+
+    // Update order for all items
+    const updatedImages = newImages.map((img, index) => ({
+      ...img,
+      order: index,
+    }));
+
+    // Mark items that need animation
+    const animatingSet = new Set<string>();
+    for (
+      let i = Math.min(oldIndex, newIndex);
+      i <= Math.max(oldIndex, newIndex);
+      i++
+    ) {
+      const key =
+        updatedImages[i].id ||
+        updatedImages[i].public_id ||
+        `img-${updatedImages[i].order}`;
+      animatingSet.add(key as string);
+    }
+    setAnimatingItems(animatingSet);
+
+    // Update the images
+    setImages(updatedImages);
   };
+
+  // Apply FLIP animation after DOM update
+  useEffect(() => {
+    if (animatingItems.size === 0) return;
+
+    // Schedule animation after render
+    requestAnimationFrame(() => {
+      // For each animating item, apply FLIP technique
+      animatingItems.forEach((key) => {
+        const element = document.getElementById(`image-item-${key}`);
+        if (!element) return;
+
+        const oldPosition = positionsRef.current.get(key);
+        if (!oldPosition) return;
+
+        const newPosition = element.getBoundingClientRect();
+
+        // Calculate the difference
+        const deltaY = oldPosition.top - newPosition.top;
+
+        // First: set to old position instantly
+        element.style.transform = `translateY(${deltaY}px)`;
+        element.style.transition = "none";
+
+        // Last & Play: animate to new position
+        requestAnimationFrame(() => {
+          element.style.transition = "transform 300ms ease-out";
+          element.style.transform = "translateY(0)";
+        });
+      });
+
+      // Clear animating items after animation completes
+      const timer = setTimeout(() => {
+        setAnimatingItems(new Set());
+      }, 300);
+
+      return () => clearTimeout(timer);
+    });
+  }, [images, animatingItems]);
 
   // Unified remove function
   const handleRemoveImage = (index: number) => {
@@ -198,14 +287,57 @@ export function ProductEditForm({ product }: { product: Product }) {
     });
   };
 
+  //const handleSetPrimary = (targetImage: Image, checked: boolean) => {
+  //  const updated = images.map((img) => ({
+  //    ...img,
+  //    is_primary: img.url === targetImage.url ? checked : false,
+  //  }));
+  //  const updatedPrimary = updated.filter((img) => "id" in img);
+  //
+  //  setImages(updatedPrimary);
+  //};
+  // Update the handleSetPrimary function in your ProductImageList component
   const handleSetPrimary = (targetImage: Image, checked: boolean) => {
-    const updated = images.map((img) => ({
-      ...img,
-      is_primary: img.url === targetImage.url ? checked : false,
-    }));
-    const updatedPrimary = updated.filter((img) => "id" in img);
+    if (!checked) {
+      // If unchecking, just update is_primary flag
+      const updated = images.map((img) => ({
+        ...img,
+        is_primary: false // No primary image if current one is unchecked
+      }));
+      setImages(updated);
+      return;
+    }
 
-    setImages(updatedPrimary);
+    // First, create a copy of the images array
+    let updated = [...images];
+
+    // Find the index of the target image
+    const targetIndex = updated.findIndex(img =>
+      (img.id && img.id === targetImage.id) ||
+      (img.public_id && img.public_id === targetImage.public_id) ||
+      img.url === targetImage.url
+    );
+
+    if (targetIndex === -1) return;
+
+    // Remove the target image from its current position
+    const [movedImage] = updated.splice(targetIndex, 1);
+
+    // Update it to be primary
+    movedImage.is_primary = true;
+
+    // Insert it at the beginning (first position)
+    updated.unshift(movedImage);
+
+    // Make sure all other images are not primary
+    updated = updated.map((img, index) => ({
+      ...img,
+      is_primary: index === 0, // Only the first image is primary
+      order: index // Update order for all images
+    }));
+
+    // Update the state with the new order
+    setImages(updated);
   };
 
   // Update form values whenever images change
@@ -267,18 +399,6 @@ export function ProductEditForm({ product }: { product: Product }) {
     // Handle each form field appropriately
     Object.entries(data).forEach(([key, value]) => {
       if (key === "images") {
-        // Stringify the array of image objects with all necessary properties
-        //const processedImages = Array.isArray(value)
-        //  ? value.map((img) => ({
-        //      type: img.type,
-        //      url: img.url,
-        //      alt_text: img.alt_text || "",
-        //      order: img.order,
-        //      is_primary: img.is_primary,
-        //      id: img.id || "",
-        //      public_id: img.public_id || "",
-        //    }))
-        //  : [];
         const processedImages = images.map((img) => ({
           type: img.type,
           url: img.url,
@@ -826,101 +946,119 @@ export function ProductEditForm({ product }: { product: Product }) {
               <div className="space-y-4">
                 <h3 className="text-lg font-medium">تصاویر محصول</h3>
                 <div className="grid gap-4">
-                  {images.map((image, index) => (
-                    <Card
-                      key={image.id || image.public_id}
-                      className="overflow-hidden"
-                    >
-                      <CardContent className="p-0">
-                        <div className="flex flex-col sm:flex-row">
-                          {/* Image Preview */}
-                          <div className="relative w-full sm:w-1/3">
-                            <img
-                              src={image.url || "/placeholder.svg"}
-                              alt={image.alt_text || "تصویر محصول"}
-                              className="h-40 w-full object-cover"
-                            />
-                            {image.is_primary && (
-                              <div className="absolute top-2 right-2 bg-primary text-primary-foreground rounded-full p-1">
-                                <Star className="h-4 w-4 fill-current" />
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Controls */}
-                          <div className="p-4 w-full sm:w-2/3 space-y-3">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="icon"
-                                  onClick={() => moveImage(index, index - 1)}
-                                  disabled={index === 0}
-                                  className="h-8 w-8"
-                                >
-                                  <ArrowUp className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="icon"
-                                  onClick={() => moveImage(index, index + 1)}
-                                  disabled={index === images.length - 1}
-                                  className="h-8 w-8"
-                                >
-                                  <ArrowDown className="h-4 w-4" />
-                                </Button>
-                                <span className="text-sm text-muted-foreground">
-                                  {index + 1} از {images.length}
-                                </span>
+                  {images.map((image, index) => {
+                    const key =
+                      image.id || image.public_id || `img-${image.order}`;
+                    return (
+                      <div
+                        key={key}
+                        id={`image-item-${key}`}
+                        className="transition-opacity duration-300"
+                        style={{
+                          willChange: "transform",
+                          position: "relative",
+                        }}
+                      >
+                        <Card className="overflow-hidden">
+                          <CardContent className="p-0">
+                            <div className="flex flex-col sm:flex-row">
+                              {/* Image Preview */}
+                              <div className="relative w-full sm:w-1/3">
+                                <img
+                                  src={image.url || "/placeholder.svg"}
+                                  alt={image.alt_text || "تصویر محصول"}
+                                  className="h-40 w-full object-cover"
+                                />
+                                {image.is_primary && (
+                                  <div className="absolute top-2 right-2 bg-primary text-primary-foreground rounded-full p-1">
+                                    <Star className="h-4 w-4 fill-current" />
+                                  </div>
+                                )}
                               </div>
 
-                              <Button
-                                type="button"
-                                variant="destructive"
-                                size="icon"
-                                onClick={() => handleRemoveImage(index)}
-                                className="h-8 w-8"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
+                              {/* Controls */}
+                              <div className="p-4 w-full sm:w-2/3 space-y-3">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="icon"
+                                      onClick={() =>
+                                        moveImage(index, index - 1)
+                                      }
+                                      disabled={index === 0}
+                                      className="h-8 w-8"
+                                    >
+                                      <ArrowUp className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="icon"
+                                      onClick={() =>
+                                        moveImage(index, index + 1)
+                                      }
+                                      disabled={index === images.length - 1}
+                                      className="h-8 w-8"
+                                    >
+                                      <ArrowDown className="h-4 w-4" />
+                                    </Button>
+                                    <span className="text-sm text-muted-foreground">
+                                      {index + 1} از {images.length}
+                                    </span>
+                                  </div>
 
-                            <div className="space-y-2">
-                              <label className="text-sm font-medium">
-                                توضیحات تصویر (Alt Text)
-                              </label>
-                              <Input
-                                value={image.alt_text || ""}
-                                onChange={(e) =>
-                                  handleAltTextChange(image, e.target.value)
-                                }
-                                placeholder="توضیحات تصویر"
-                                className="text-right"
-                              />
-                            </div>
+                                  <Button
+                                    type="button"
+                                    variant="destructive"
+                                    size="icon"
+                                    onClick={() => handleRemoveImage(index)}
+                                    className="h-8 w-8"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
 
-                            <div className="flex items-center gap-2">
-                              <Checkbox
-                                id={`primary-${image.id || index}`}
-                                checked={image.is_primary}
-                                onCheckedChange={(checked) =>
-                                  handleSetPrimary(image, checked as boolean)
-                                }
-                              />
-                              <label
-                                htmlFor={`primary-${image.id || index}`}
-                                className="text-sm font-medium cursor-pointer"
-                              >
-                                تصویر اصلی
-                              </label>
+                                <div className="space-y-2">
+                                  <label className="text-sm font-medium">
+                                    توضیحات تصویر (Alt Text)
+                                  </label>
+                                  <Input
+                                    value={image.alt_text || ""}
+                                    onChange={(e) =>
+                                      handleAltTextChange(image, e.target.value)
+                                    }
+                                    placeholder="توضیحات تصویر"
+                                    className="text-right"
+                                  />
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                  <Checkbox
+                                    id={`primary-${image.id || index}`}
+                                    checked={image.is_primary}
+                                    onCheckedChange={(checked) =>
+                                      handleSetPrimary(
+                                        image,
+                                        checked as boolean,
+                                      )
+                                    }
+                                  />
+                                  <label
+                                    htmlFor={`primary-${image.id || index}`}
+                                    className="text-sm font-medium cursor-pointer"
+                                  >
+                                    تصویر اصلی
+                                  </label>
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                          </CardContent>
+                        </Card>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             ) : (
