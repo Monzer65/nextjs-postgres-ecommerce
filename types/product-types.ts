@@ -68,4 +68,5 @@ export interface ProductResult {
   discount_value: number | null;
   is_featured: boolean | null;
   on_sale: boolean | null;
+  firstImageUrl?: string;
 }

@@ -194,51 +194,111 @@ export function ProductEditForm({ product }: { product: Product }) {
   //  });
   //};
   //
-  // Function to move an image with animation
+  // Update the moveImage function in your ProductImageList component
   const moveImage = (oldIndex: number, newIndex: number) => {
-    if (oldIndex === newIndex) return;
+    if (oldIndex === newIndex) return
 
-    // Store current positions before reordering
-    const itemsMap = new Map<string, DOMRect>();
+    // Store current positions before reordering (for animation)
+    const itemsMap = new Map<string, DOMRect>()
     images.forEach((img) => {
-      const key = img.id || img.public_id || `img-${img.order}`;
-      const element = document.getElementById(`image-item-${key}`);
+      const key = img.id || img.public_id || `img-${img.order}`
+      const element = document.getElementById(`image-item-${key}`)
       if (element) {
-        itemsMap.set(key as string, element.getBoundingClientRect());
+        itemsMap.set(key as string, element.getBoundingClientRect())
       }
-    });
-    positionsRef.current = itemsMap;
+    })
+    positionsRef.current = itemsMap
 
     // Create new array with reordered items
-    const newImages = [...images];
-    const [movedItem] = newImages.splice(oldIndex, 1);
-    newImages.splice(newIndex, 0, movedItem);
+    const newImages = [...images]
+    const [movedItem] = newImages.splice(oldIndex, 1)
+    newImages.splice(newIndex, 0, movedItem)
+
+    // If an image is moved to the first position (index 0), make it primary
+    if (newIndex === 0) {
+      // Update all images: only the first one is primary
+      newImages.forEach((img, idx) => {
+        img.is_primary = idx === 0
+      })
+    }
+    // If the primary image is moved away from first position
+    else if (oldIndex === 0 && images[0].is_primary) {
+      // The image that was moved was primary and in first position
+      // Now we need to decide what happens:
+
+      // Option 1: Keep the moved image as primary even in new position
+      // newImages.forEach(img => { img.is_primary = img === movedItem })
+
+      // Option 2: Make the new first image primary instead
+      newImages.forEach((img, idx) => {
+        img.is_primary = idx === 0
+      })
+
+      // Choose one of the options above based on your preferred behavior
+    }
 
     // Update order for all items
     const updatedImages = newImages.map((img, index) => ({
       ...img,
       order: index,
-    }));
+    }))
 
     // Mark items that need animation
-    const animatingSet = new Set<string>();
-    for (
-      let i = Math.min(oldIndex, newIndex);
-      i <= Math.max(oldIndex, newIndex);
-      i++
-    ) {
-      const key =
-        updatedImages[i].id ||
-        updatedImages[i].public_id ||
-        `img-${updatedImages[i].order}`;
-      animatingSet.add(key as string);
+    const animatingSet = new Set<string>()
+    for (let i = Math.min(oldIndex, newIndex); i <= Math.max(oldIndex, newIndex); i++) {
+      const key = updatedImages[i].id || updatedImages[i].public_id || `img-${updatedImages[i].order}`
+      animatingSet.add(key as string)
     }
-    setAnimatingItems(animatingSet);
+    setAnimatingItems(animatingSet)
 
     // Update the images
-    setImages(updatedImages);
-  };
-
+    setImages(updatedImages)
+  }
+  // Function to move an image with animation
+  //const moveImage = (oldIndex: number, newIndex: number) => {
+  //  if (oldIndex === newIndex) return;
+  //
+  //  // Store current positions before reordering
+  //  const itemsMap = new Map<string, DOMRect>();
+  //  images.forEach((img) => {
+  //    const key = img.id || img.public_id || `img-${img.order}`;
+  //    const element = document.getElementById(`image-item-${key}`);
+  //    if (element) {
+  //      itemsMap.set(key as string, element.getBoundingClientRect());
+  //    }
+  //  });
+  //  positionsRef.current = itemsMap;
+  //
+  //  // Create new array with reordered items
+  //  const newImages = [...images];
+  //  const [movedItem] = newImages.splice(oldIndex, 1);
+  //  newImages.splice(newIndex, 0, movedItem);
+  //
+  //  // Update order for all items
+  //  const updatedImages = newImages.map((img, index) => ({
+  //    ...img,
+  //    order: index,
+  //  }));
+  //
+  //  // Mark items that need animation
+  //  const animatingSet = new Set<string>();
+  //  for (
+  //    let i = Math.min(oldIndex, newIndex);
+  //    i <= Math.max(oldIndex, newIndex);
+  //    i++
+  //  ) {
+  //    const key =
+  //      updatedImages[i].id ||
+  //      updatedImages[i].public_id ||
+  //      `img-${updatedImages[i].order}`;
+  //    animatingSet.add(key as string);
+  //  }
+  //  setAnimatingItems(animatingSet);
+  //
+  //  // Update the images
+  //  setImages(updatedImages);
+  //};
+  //
   // Apply FLIP animation after DOM update
   useEffect(() => {
     if (animatingItems.size === 0) return;
@@ -279,11 +339,34 @@ export function ProductEditForm({ product }: { product: Product }) {
   }, [images, animatingItems]);
 
   // Unified remove function
+  //const handleRemoveImage = (index: number) => {
+  //  setImages((prev) => {
+  //    const newImages = [...prev];
+  //    newImages.splice(index, 1);
+  //    return newImages;
+  //  });
+  //};
+  // Update the handleRemoveImage function
   const handleRemoveImage = (index: number) => {
     setImages((prev) => {
       const newImages = [...prev];
+
+      // Remove the image at the specified index
       newImages.splice(index, 1);
-      return newImages;
+
+      // If we removed the first image (index 0), make the new first image primary
+      if (index === 0 && newImages.length > 0) {
+        // Update all images to ensure only the new first one is primary
+        newImages.forEach((img, idx) => {
+          img.is_primary = idx === 0;
+        });
+      }
+
+      // Update the order property for all remaining images
+      return newImages.map((img, idx) => ({
+        ...img,
+        order: idx
+      }));
     });
   };
 

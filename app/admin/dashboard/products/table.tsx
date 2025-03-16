@@ -49,7 +49,7 @@ export default async function ProductsTable({
         <div className="space-y-2">
           <h3 className="text-xl font-semibold">محصولی یافت نشد</h3>
           <p className="text-muted-foreground">
-            برای ایجاد محصول جدید روی دکمه "افزودن محصول" کلیک کنید
+            برای ایجاد محصول جدید روی دکمه افزودن محصول کلیک کنید
           </p>
         </div>
       </div>
@@ -83,7 +83,7 @@ export default async function ProductsTable({
                 <div className="relative aspect-square w-20 overflow-hidden rounded-lg border">
                   <Image
                     unoptimized
-                    src={product.thumbnail ?? "/camera.svg"}
+                    src={product.firstImageUrl || "/camera.svg"}
                     alt={product.name}
                     fill
                     className="object-cover"

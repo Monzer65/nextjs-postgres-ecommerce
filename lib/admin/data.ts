@@ -25,6 +25,13 @@ export const getFilteredProducts = unstable_cache(
         .leftJoin("manufacturer", "manufacturer.id", "product.manufacturer_id")
         .leftJoin("product_review", "product_review.product_id", "product.id")
         .leftJoin("discount", "product.discount_id", "discount.id")
+        .leftJoin(
+          "product_image",
+          (join) =>
+            join
+              .onRef("product_image.product_id", "=", "product.id")
+              .on("product_image.order", "=", 0), // Fetch the first image (order = 0)
+        )
         .select([
           "product.id",
           "product.name",
@@ -40,6 +47,7 @@ export const getFilteredProducts = unstable_cache(
           "discount.discount_value",
           "product.featured as is_featured",
           "product.on_sale",
+          "product_image.url as firstImageUrl",
           //sql<number>`COALESCE(AVG(product_review.rating), 0)`.as(
           //  "average_rating",
           //),
@@ -53,6 +61,7 @@ export const getFilteredProducts = unstable_cache(
           "discount.discount_value",
           "product.featured",
           "product.on_sale",
+          "product_image.url",
         ]);
 
       // Apply filters
