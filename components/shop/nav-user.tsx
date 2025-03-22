@@ -18,25 +18,27 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogoutButton } from "./logout-button";
-import { User, UserSession } from "@/db/schema";
+import { LogoutButton } from "@/components/logout-button";
+import { Role, User, UserSession } from "@/db/schema";
 import Link from "next/link";
-import { Button, buttonVariants } from "./ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function UserAccountDropdown({
   session,
   user,
-  roles
+  roles,
 }: {
   session: UserSession | null;
   user: User | null;
-  roles: any | null;
+  roles: Role[] | null;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const isMobile = useIsMobile();
-  const isAdmin = roles.some((role: { name: string }) => role.name.includes("Admin"));
+  const isAdmin = roles?.some((role: { name: string }) =>
+    role.name.includes("Admin"),
+  );
 
   if (!session || !user?.phone_verified || !user?.otp_verified) {
     return (
@@ -70,8 +72,9 @@ export default function UserAccountDropdown({
             </span>
           )}
           <ChevronDown
-            className={`w-4 h-4 transition-transform ${isOpen ? "rotate-180" : ""
-              }`}
+            className={`w-4 h-4 transition-transform ${
+              isOpen ? "rotate-180" : ""
+            }`}
           />
         </Button>
       </DropdownMenuTrigger>

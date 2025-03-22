@@ -227,31 +227,31 @@ export async function getProductById(id: number) {
   return data;
 }
 
-let dropdownDataCache: any = null;
-const cacheExpiry = 60 * 60 * 1000; // 1 hour
-
-export async function fetchDropdownData() {
-  if (
-    dropdownDataCache &&
-    Date.now() - dropdownDataCache.timestamp < cacheExpiry
-  ) {
-    return dropdownDataCache.data;
-  }
-
-  const tables = ["category"];
-  const [categories] = await Promise.all(
-    tables.map((table) =>
-      db
-        .selectFrom(table as any)
-        .selectAll()
-        .execute(),
-    ),
-  );
-
-  const data = { categories };
-  dropdownDataCache = { data, timestamp: Date.now() };
-  return data;
-}
+//let dropdownDataCache: any = null;
+//const cacheExpiry = 60 * 60 * 1000; // 1 hour
+//
+//export async function fetchDropdownData() {
+//  if (
+//    dropdownDataCache &&
+//    Date.now() - dropdownDataCache.timestamp < cacheExpiry
+//  ) {
+//    return dropdownDataCache.data;
+//  }
+//
+//  const tables = ["category"];
+//  const [categories] = await Promise.all(
+//    tables.map((table) =>
+//      db
+//        .selectFrom(table as any)
+//        .selectAll()
+//        .execute(),
+//    ),
+//  );
+//
+//  const data = { categories };
+//  dropdownDataCache = { data, timestamp: Date.now() };
+//  return data;
+//}
 
 export async function getCategories() {
   const data = await db.selectFrom("category").selectAll().execute();

@@ -13,7 +13,6 @@ import {
   SquareTerminal,
   Tag,
   Users2,
-  WatchIcon,
 } from "lucide-react";
 
 import { NavMain } from "@/components/nav-main";
