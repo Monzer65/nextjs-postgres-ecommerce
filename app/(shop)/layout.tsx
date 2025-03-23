@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Header } from "@/components/shop/site-header";
 import { Footer } from "@/components/shop/site-footer";
+import { SearchModalProvider } from "@/hooks/search-modal-context";
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -13,10 +14,12 @@ export default function ShopLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <div className="flex min-h-screen flex-col">
-      <Header />
-      {children}
-      <Footer />
-    </div>
+    <SearchModalProvider>
+      <div className="flex min-h-screen flex-col">
+        <Header />
+        {children}
+        <Footer />
+      </div>
+    </SearchModalProvider>
   );
 }

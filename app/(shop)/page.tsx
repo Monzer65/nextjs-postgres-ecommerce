@@ -16,11 +16,7 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  Search,
-  ShoppingCart,
   Heart,
-  User,
-  Menu,
   Star,
   Truck,
   RefreshCw,
@@ -36,7 +32,7 @@ export default function Home() {
         <div className="absolute inset-0 bg-gradient-to-r from-black/50 to-black/25 z-10" />
         <div className="relative h-[500px] w-full">
           <Image
-            src="/hero.jpg?height=1080&width=1920"
+            src="/hero.jpg"
             alt="Elegant living room with curtains"
             fill
             className="object-cover"
@@ -217,12 +213,12 @@ export default function Home() {
                     ))}
                 </div>
                 <p className="mt-4 text-muted-foreground">
-                  "{testimonial.content}"
+                  &quot;{testimonial.content}&quot;
                 </p>
                 <div className="mt-4 flex items-center gap-4">
                   <div className="h-10 w-10 overflow-hidden rounded-full bg-muted">
                     <Image
-                      src="/placeholder.svg?height=40&width=40"
+                      src="/placeholder.svg"
                       alt={testimonial.name}
                       width={40}
                       height={40}
@@ -274,19 +270,19 @@ export default function Home() {
 const categories = [
   {
     name: "Blackout Curtains",
-    image: "/placeholder.svg?height=400&width=400",
+    image: "/placeholder.svg",
   },
   {
     name: "Sheer Curtains",
-    image: "/placeholder.svg?height=400&width=400",
+    image: "/placeholder.svg",
   },
   {
     name: "Valances",
-    image: "/placeholder.svg?height=400&width=400",
+    image: "/placeholder.svg",
   },
   {
     name: "Curtain Rods",
-    image: "/placeholder.svg?height=400&width=400",
+    image: "/placeholder.svg",
   },
 ];
 
@@ -298,7 +294,7 @@ const products = [
     originalPrice: 119.99,
     rating: 5,
     reviews: 124,
-    image: "/placeholder.svg?height=300&width=300",
+    image: "/placeholder.svg",
   },
   {
     id: 2,
@@ -306,7 +302,7 @@ const products = [
     price: 59.99,
     rating: 4,
     reviews: 86,
-    image: "/placeholder.svg?height=300&width=300",
+    image: "/placeholder.svg",
   },
   {
     id: 3,
@@ -315,7 +311,7 @@ const products = [
     originalPrice: 99.99,
     rating: 5,
     reviews: 210,
-    image: "/placeholder.svg?height=300&width=300",
+    image: "/placeholder.svg",
   },
   {
     id: 4,
@@ -323,7 +319,7 @@ const products = [
     price: 34.99,
     rating: 4,
     reviews: 42,
-    image: "/placeholder.svg?height=300&width=300",
+    image: "/placeholder.svg",
   },
 ];
 

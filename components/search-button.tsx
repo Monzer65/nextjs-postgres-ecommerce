@@ -1,24 +1,22 @@
-"use client";
+"use client"
 
-import React, { useState } from "react";
-import { Button } from "@/components/ui/button"; // Shadcn button component
-import { SearchIcon } from "lucide-react"; // Shadcn-compatible icons
-import { SearchModal } from "./search-modal";
+import { Button } from "@/components/ui/button"
+import { useSearchModal } from "@/hooks/search-modal-context"
+import { Search } from "lucide-react"
 
-export const SearchButton: React.FC = () => {
-    const [isOpen, setIsOpen] = useState(false);
+export const SearchButton = () => {
+    const { openModal } = useSearchModal()
 
     return (
-        <>
-            <Button
-                variant="outline"
-                onClick={() => setIsOpen(true)}
-                className="flex items-center space-x-2"
-            >
-                <SearchIcon className="w-5 h-5" />
-                <span>جستجو...</span>
-            </Button>
-            {isOpen && <SearchModal onClose={() => setIsOpen(false)} />}
-        </>
-    );
-};
+        <Button
+            variant="outline"
+            onClick={openModal}
+            className="flex items-center gap-2 h-10 px-4 border-muted-foreground/20 hover:bg-accent"
+        >
+            <Search className="w-4 h-4" />
+            <span>جستجو...</span>
+        </Button>
+    )
+}
+
+

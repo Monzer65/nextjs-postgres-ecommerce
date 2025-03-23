@@ -45,20 +45,23 @@ export async function Header() {
       {/* Header */}
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-2 md:p-4">
         <div className="flex h-14 items-center">
-          <div className="flex justify-between items-center gap-2">
-            <div className="font-bold text-xl">شاپزی</div>
+          <MobileNav
+            categories={categories}
+            session={session || null}
+            user={user ?? null}
+          />
+
+          <div className="flex justify-between items-center gap-2 mr-4 md:mr-0">
+            <Link href="/" className="font-bold text-xl">
+              شاپزی
+            </Link>
             <DesktopCategoryNavigation
               categories={categories}
               className="hidden md:block"
             />
           </div>
 
-          <MobileNav
-            categories={categories}
-            session={session || null}
-            user={user ?? null}
-          />
-          <div className="flex flex-1 items-center space-x-2 rtl:space-x-reverse md:justify-end mr-4">
+          <div className="flex flex-1 items-center space-x-2 rtl:space-x-reverse justify-end mr-4">
             <SearchButton />
             <nav className="flex items-center space-x-2 rtl:space-x-reverse">
               <Sheet>

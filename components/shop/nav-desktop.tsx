@@ -8,6 +8,7 @@ import Image from "next/image";
 import { ChevronDown, ChevronLeft, Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Category } from "@/types/categories-types";
+import { Button } from "../ui/button";
 
 interface CategoryNavigationProps {
   categories: Category[];
@@ -89,7 +90,7 @@ export default function DesktopCategoryNavigation({
               isExpanded && "bg-primary/10",
             )}
           >
-            <div className="relative w-6 h-6 rounded-full overflow-hidden flex-shrink-0">
+            <div className="relative w-6 h-6 rounded-md overflow-hidden flex-shrink-0">
               <Image
                 src={category.image || "/placeholder.svg"}
                 alt={category.name}
@@ -131,16 +132,13 @@ export default function DesktopCategoryNavigation({
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      <button
-        onClick={toggleMenu}
-        className="flex items-center gap-2 px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-      >
+      <Button variant="outline" onClick={toggleMenu}>
         {isOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
         <span>دسته‌ها</span>
         <ChevronDown
           className={cn("h-4 w-4 transition-transform", isOpen && "rotate-180")}
         />
-      </button>
+      </Button>
 
       {isOpen && (
         <div className="absolute z-50 top-full right-0 mt-2 w-[600px] lg:w-[800px] bg-background rounded-lg shadow-lg border border-border overflow-hidden">
